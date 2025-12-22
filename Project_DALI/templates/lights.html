@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="panel">
+  <h2>灯光控制</h2>
+  <div class="controls">
+    <div>
+      <label>串口</label>
+      <button id="serial-connect">连接串口(Web Serial)</button>
+      <span id="serial-status" class="serial-status">未连接</span>
+    </div>
+    <div class="add-form">
+      <input type="text" id="gw-hex" placeholder="网关地址(十六进制, 如 01)" value="01">
+      <input type="number" id="dev-addr" placeholder="设备地址(十进制)">
+      <input type="text" id="dev-name" placeholder="灯光名称">
+      <button id="add-light">添加灯具</button>
+    </div>
+    <div class="hint">发送指令格式: 28 + 01 + 网关地址 + 12 + 设备地址(十进制×2后转十六进制) + 控制指令(亮度0-255) + 校验和(前六字节累加)</div>
+  </div>
+  <div id="lights-grid" class="lights-grid"></div>
+  <div class="actions">
+    <button id="scan-devices">重新扫描设备</button>
+  </div>
+{% endblock %}

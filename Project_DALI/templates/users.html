@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="panel">
+  <h2>用户管理</h2>
+  <div class="actions">
+    <form id="user-add-form">
+      <input type="text" id="new-username" placeholder="用户名" required>
+      <input type="password" id="new-password" placeholder="密码" required>
+      <button type="submit">新增用户</button>
+    </form>
+  </div>
+  <div id="users-list"></div>
+{% endblock %}

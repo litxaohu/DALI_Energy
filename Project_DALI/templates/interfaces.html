@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="panel">
+  <h2>数据接口</h2>
+  <div class="interfaces-grid">
+    <div class="card">
+      <h3>MQTT 服务</h3>
+      <form id="mqtt-form">
+        <label>地址 <input type="text" id="mqtt-host" placeholder="localhost"></label>
+        <label>端口 <input type="number" id="mqtt-port" placeholder="1883"></label>
+        <label>用户名 <input type="text" id="mqtt-username"></label>
+        <label>密码 <input type="password" id="mqtt-password"></label>
+        <button type="submit">保存配置</button>
+        <div id="mqtt-status" class="status"></div>
+      </form>
+    </div>
+    <div class="card">
+      <h3>指标配置</h3>
+      <div id="metrics"></div>
+    </div>
+  </div>
+</section>
+{% endblock %}

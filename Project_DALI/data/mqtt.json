@@ -1,0 +1,8 @@
+{
+  "enabled": false,
+  "host": "localhost",
+  "port": 1883,
+  "topic": "dali/energy",
+  "username": "",
+  "password": ""
+}

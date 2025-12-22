@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "name": "全亮",
+    "description": "所有灯具亮度置 254",
+    "actions": [{"type": "set_all", "level": 254}]
+  },
+  {
+    "id": 2,
+    "name": "节能",
+    "description": "将所有灯具亮度置 80",
+    "actions": [{"type": "set_all", "level": 80}]
+  }
+]

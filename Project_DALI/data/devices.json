@@ -1,0 +1,26 @@
+[
+  {
+    "id": 1,
+    "address": 0,
+    "name": "模拟射灯A",
+    "level": 254
+  },
+  {
+    "id": 2,
+    "address": 1,
+    "name": "模拟灯带B",
+    "level": 254
+  },
+  {
+    "id": 3,
+    "address": 2,
+    "name": "模拟筒灯C",
+    "level": 254
+  },
+  {
+    "id": 4,
+    "address": 3,
+    "name": "模拟壁灯D",
+    "level": 254
+  }
+]

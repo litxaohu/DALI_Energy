@@ -1,0 +1,6 @@
+[
+  {"key":"battery","label":"电池","enabled":true,"subscribe_topic":"dali/energy/battery","publish_topic":"dali/energy/battery/set","test_data":{"soc_percent":68,"remaining_kwh":18.4,"charge_kw":0.85,"to_house_kw":2.8}},
+  {"key":"building","label":"建筑用电","enabled":true,"subscribe_topic":"dali/energy/building","publish_topic":"dali/energy/building/set","test_data":{"kwh":8.91}},
+  {"key":"tariff_price","label":"电价","enabled":true,"subscribe_topic":"dali/energy/price","publish_topic":"dali/energy/price/set","test_data":{"current_price":0.92}},
+  {"key":"fee_cost","label":"电费","enabled":true,"subscribe_topic":"dali/energy/cost","publish_topic":"dali/energy/cost/set","test_data":{"current_fee":1.59}}
+]
