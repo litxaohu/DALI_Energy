@@ -3,11 +3,14 @@ document.addEventListener('DOMContentLoaded',function(){
   var scan=document.getElementById('scan-devices');
   var portSelect=document.getElementById('port-select');
   var portRefresh=document.getElementById('port-refresh');
+  var portConfirm=document.getElementById('port-confirm');
+  var portStatus=document.getElementById('port-status');
   var gwHex=document.getElementById('gw-hex');
   var devAddr=document.getElementById('dev-addr');
   var devName=document.getElementById('dev-name');
   var addBtn=document.getElementById('add-light');
   var selectedPort='/dev/ttyAMA3';
+  var activePort='';
   function load(){
     fetch('/api/lights').then(function(r){return r.json()}).then(function(list){
       grid.innerHTML='';
@@ -26,11 +29,21 @@ document.addEventListener('DOMContentLoaded',function(){
         valueLabel.textContent='亮度: '+slider.value;
         var instr=document.createElement('div');
         instr.style.fontSize='12px'; instr.style.color='#6b7280';
+        var sendBtn=document.createElement('button');
+        sendBtn.textContent='发送';
+        sendBtn.style.marginTop='6px';
+        sendBtn.style.padding='6px 10px';
+        sendBtn.style.border='none';
+        sendBtn.style.borderRadius='6px';
+        sendBtn.style.background='#2563eb';
+        sendBtn.style.color='#fff';
         slider.addEventListener('input',function(){
           valueLabel.textContent='亮度: '+slider.value;
         });
-        slider.addEventListener('change',function(){
-          fetch('/api/dali/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({port:selectedPort,gateway_hex:(d.gateway||'01'),address_dec:d.address,level:Number(slider.value)})})
+        sendBtn.addEventListener('click',function(){
+          var p = activePort || selectedPort;
+          if(!p){ alert('请先确认串口'); return }
+          fetch('/api/dali/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({port:p,gateway_hex:(d.gateway||'01'),address_dec:d.address,level:Number(slider.value)})})
           .then(function(r){return r.json()}).then(function(resp){
             if(resp.status==='ok'){instr.textContent='发送指令: '+(resp.instruction||'')+' (mode: '+resp.mode+')';}
           });
@@ -38,6 +51,7 @@ document.addEventListener('DOMContentLoaded',function(){
         card.appendChild(name);
         card.appendChild(slider);
         card.appendChild(valueLabel);
+        card.appendChild(sendBtn);
         card.appendChild(instr);
         grid.appendChild(card);
       });
@@ -56,15 +70,25 @@ document.addEventListener('DOMContentLoaded',function(){
   loadPorts();
   if(portSelect){ portSelect.addEventListener('change', function(){ selectedPort=this.value }) }
   if(portRefresh){ portRefresh.addEventListener('click', function(){ loadPorts() }) }
+  if(portConfirm){ portConfirm.addEventListener('click', function(){
+    fetch('/api/system/set_port',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({port:selectedPort})})
+    .then(function(r){return r.json()}).then(function(resp){
+      if(resp.status==='ok'){ activePort=resp.port; portStatus.textContent='已设置: '+activePort }
+    })
+  }) }
   if(addBtn){
     addBtn.addEventListener('click',function(){
       var name=(devName.value||'').trim();
-      var addr=Number(devAddr.value||0);
+      var addrStr=(devAddr.value||'').trim();
+      var addr=Number(addrStr);
+      if(addrStr==='' || isNaN(addr)){return}
       var gw=(gwHex.value||'01').trim();
-      if(!name||!addr){return}
+      if(!name){return}
       fetch('/api/lights/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,address_dec:addr,gateway_hex:gw,port:selectedPort})})
       .then(function(r){return r.json()}).then(function(resp){
-        if(resp.status==='ok'){devName.value=''; devAddr.value=''; load()}
+        if(resp.status==='ok'){devName.value=''; devAddr.value=''; load()} else {
+          alert(resp.msg||'添加失败');
+        }
       })
     })
   }

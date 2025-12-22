@@ -22,5 +22,13 @@
     "address": 3,
     "name": "模拟壁灯D",
     "level": 50
+  },
+  {
+    "id": 5,
+    "address": 40,
+    "name": "灯光1",
+    "level": 0,
+    "gateway": "01",
+    "port": "/dev/ttyAMA2"
   }
 ]

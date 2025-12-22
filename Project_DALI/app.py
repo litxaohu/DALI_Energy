@@ -16,8 +16,11 @@ def read_json(name):
     p = Path(config.DATA_DIR) / name
     if not p.exists():
         return []
-    with open(p, 'r', encoding='utf-8') as f:
-        return json.load(f)
+    try:
+        with open(p, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception:
+        return []
 
 def write_json(name, data):
     p = Path(config.DATA_DIR) / name
@@ -85,6 +88,16 @@ def interfaces_page():
 @login_required
 def scan_ports():
     return jsonify(["/dev/ttyAMA2", "/dev/ttyAMA3", "/dev/ttyAMA4"])
+
+@app.route('/api/system/set_port', methods=['POST'])
+@login_required
+def set_port():
+    data = request.get_json(force=True)
+    port = data.get('port')
+    if not port:
+        return jsonify({"status": "error", "msg": "缺少端口"}), 400
+    app.config['ACTIVE_PORT'] = port
+    return jsonify({"status": "ok", "port": port})
 
 @app.route('/api/system/connect_port', methods=['POST'])
 @login_required
@@ -464,24 +477,24 @@ def _try_import_serial():
 @login_required
 def dali_send():
     data = request.get_json(force=True)
-    port = data.get('port') or "/dev/ttyAMA3"
+    port = data.get('port') or app.config.get('ACTIVE_PORT') or "/dev/ttyAMA3"
     gateway_hex = (data.get('gateway_hex') or "01").upper()
     address_dec = int(data.get('address_dec') or 0)
     level = int(data.get('level') or 0)
     instr = _build_instruction(gateway_hex=gateway_hex, device_addr_dec=address_dec, level=level)
     serial = _try_import_serial()
     sent = False
-    mode = "mock"
+    modes = []
+    print(f"[DALI] Send HEX {instr} to {port} (gw={gateway_hex} addr_dec={address_dec} level={level})")
     if serial:
         try:
             ser = serial.Serial(port, baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=1)
             ser.write(bytes.fromhex(instr))
             ser.close()
             sent = True
-            mode = "serial"
+            modes.append("serial")
         except Exception:
-            sent = False
-            mode = "serial_error"
+            modes.append("serial_error")
     if not sent:
         try:
             try:
@@ -491,17 +504,20 @@ def dali_send():
             with open(port, 'wb', buffering=0) as f:
                 f.write(bytes.fromhex(instr))
             sent = True
-            mode = "file"
+            modes.append("file")
         except Exception:
-            try:
-                hex_clean = "".join([c for c in instr if c.upper() in "0123456789ABCDEF"])
-                bash_cmd = f"printf $(echo -n {hex_clean} | sed 's/../\\\\x&/g') > {port}"
-                subprocess.run(["bash", "-lc", bash_cmd], check=True)
-                sent = True
-                mode = "bash"
-            except Exception:
-                mode = "error"
-    return jsonify({"status": "ok", "instruction": instr, "checksum": instr[-2:], "sent": sent, "mode": mode})
+            pass
+    # Always attempt terminal-based send as well (prints command)
+    try:
+        hex_clean = "".join([c for c in instr if c.upper() in "0123456789ABCDEF"])
+        bash_cmd = f"printf $(echo -n {hex_clean} | sed 's/../\\\\x&/g') > {port}"
+        print(f"[DALI] Terminal send: {bash_cmd}")
+        subprocess.run(["bash", "-lc", bash_cmd], check=True)
+        modes.append("terminal")
+        sent = True
+    except Exception:
+        modes.append("terminal_error")
+    return jsonify({"status": "ok", "instruction": instr, "checksum": instr[-2:], "sent": sent, "mode": "+".join(modes)})
 @app.route('/api/interfaces', methods=['GET'])
 @login_required
 def interfaces_get():
