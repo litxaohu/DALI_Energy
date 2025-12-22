@@ -1,73 +1,76 @@
-document.addEventListener('DOMContentLoaded',async function(){
+document.addEventListener('DOMContentLoaded',function(){
   var grid=document.getElementById('lights-grid');
   var scan=document.getElementById('scan-devices');
+  var portSelect=document.getElementById('port-select');
+  var portRefresh=document.getElementById('port-refresh');
   var gwHex=document.getElementById('gw-hex');
   var devAddr=document.getElementById('dev-addr');
   var devName=document.getElementById('dev-name');
   var addBtn=document.getElementById('add-light');
-  var connectBtn=document.getElementById('serial-connect');
-  var statusEl=document.getElementById('serial-status');
-  var port=null, writer=null;
-  function getLocalList(){ try{ return JSON.parse(localStorage.getItem('localLights')||'[]') }catch(e){ return [] } }
-  function setLocalList(list){ localStorage.setItem('localLights', JSON.stringify(list||[])) }
-  function toHex2(n){ var s = Number(n)&0xFF; return s.toString(16).toUpperCase().padStart(2,'0') }
-  function buildInstr(gwHexStr, addrDec, level){
-    var start='28', fixed='01', ctrl='12';
-    var gw=String(gwHexStr||'01').toUpperCase().padStart(2,'0');
-    var dev=toHex2(Number(addrDec)*2);
-    var cmd=toHex2(Number(level));
-    var parts=[start,fixed,gw,ctrl,dev,cmd];
-    var sum=parts.reduce(function(acc,p){return (acc + parseInt(p,16))&0xFF},0);
-    var chk=toHex2(sum);
-    var hex=parts.join('')+chk;
-    var bytes=new Uint8Array(hex.match(/.{1,2}/g).map(function(h){return parseInt(h,16)}));
-    return {hex:hex, bytes:bytes};
-  }
-  async function ensureSerial(){
-    if(!('serial' in navigator)){ alert('此浏览器不支持 Web Serial API'); return false }
-    if(!port){ try{ port = await navigator.serial.requestPort(); await port.open({ baudRate: 9600 }); writer = port.writable.getWriter(); statusEl.textContent='已连接'; } catch(e){ statusEl.textContent='连接失败'; return false } }
-    return true;
-  }
-  function render(){
-    var list=getLocalList();
-    grid.innerHTML='';
-    list.forEach(function(d, idx){
-      var card=document.createElement('div'); card.className='device';
-      var name=document.createElement('div'); name.className='device-name'; name.textContent=d.name+' (#'+d.address+') [GW '+(d.gateway||'01')+']';
-      var slider=document.createElement('input'); slider.type='range'; slider.min='0'; slider.max='255'; slider.value=String(d.level||0);
-      var valueLabel=document.createElement('div'); valueLabel.textContent='亮度: '+slider.value;
-      var instr=document.createElement('div'); instr.style.fontSize='12px'; instr.style.color='#6b7280';
-      slider.addEventListener('input', function(){ valueLabel.textContent='亮度: '+slider.value });
-      slider.addEventListener('change', async function(){
-        var ins=buildInstr(d.gateway||'01', d.address, Number(slider.value));
-        instr.textContent='发送指令: '+ins.hex;
-        if(await ensureSerial()){ try{ await writer.write(ins.bytes) } catch(e){ statusEl.textContent='发送失败' } }
-        d.level = Number(slider.value);
-        list[idx]=d; setLocalList(list);
+  var selectedPort='/dev/ttyAMA3';
+  function load(){
+    fetch('/api/lights').then(function(r){return r.json()}).then(function(list){
+      grid.innerHTML='';
+      list.forEach(function(d){
+        var card=document.createElement('div');
+        card.className='device';
+        var name=document.createElement('div');
+        name.className='device-name';
+        name.textContent=d.name+' (#'+d.address+')'+(d.gateway?' [GW '+d.gateway+']':'');
+        var slider=document.createElement('input');
+        slider.type='range';
+        slider.min='0';
+        slider.max='255';
+        slider.value=String(d.level||0);
+        var valueLabel=document.createElement('div');
+        valueLabel.textContent='亮度: '+slider.value;
+        var instr=document.createElement('div');
+        instr.style.fontSize='12px'; instr.style.color='#6b7280';
+        slider.addEventListener('input',function(){
+          valueLabel.textContent='亮度: '+slider.value;
+        });
+        slider.addEventListener('change',function(){
+          fetch('/api/dali/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({port:selectedPort,gateway_hex:(d.gateway||'01'),address_dec:d.address,level:Number(slider.value)})})
+          .then(function(r){return r.json()}).then(function(resp){
+            if(resp.status==='ok'){instr.textContent='发送指令: '+(resp.instruction||'')+' (mode: '+resp.mode+')';}
+          });
+        });
+        card.appendChild(name);
+        card.appendChild(slider);
+        card.appendChild(valueLabel);
+        card.appendChild(instr);
+        grid.appendChild(card);
       });
-      card.appendChild(name); card.appendChild(slider); card.appendChild(valueLabel); card.appendChild(instr); grid.appendChild(card);
     });
   }
-  render();
+  function loadPorts(){
+    fetch('/api/system/scan_ports').then(function(r){return r.json()}).then(function(list){
+      portSelect.innerHTML='';
+      list.forEach(function(p){
+        var opt=document.createElement('option'); opt.value=p; opt.textContent=p; portSelect.appendChild(opt);
+      });
+      selectedPort=portSelect.value||selectedPort;
+    });
+  }
+  load();
+  loadPorts();
+  if(portSelect){ portSelect.addEventListener('change', function(){ selectedPort=this.value }) }
+  if(portRefresh){ portRefresh.addEventListener('click', function(){ loadPorts() }) }
   if(addBtn){
-    addBtn.addEventListener('click', function(){
+    addBtn.addEventListener('click',function(){
       var name=(devName.value||'').trim();
       var addr=Number(devAddr.value||0);
       var gw=(gwHex.value||'01').trim();
       if(!name||!addr){return}
-      var list=getLocalList();
-      if(list.some(function(it){return Number(it.address)===addr})){ return }
-      list.push({id: (list.length?Math.max.apply(null,list.map(function(i){return i.id||0}))+1:1), address: addr, name: name, level: 0, gateway: gw});
-      setLocalList(list);
-      devName.value=''; devAddr.value='';
-      render();
-    });
+      fetch('/api/lights/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,address_dec:addr,gateway_hex:gw,port:selectedPort})})
+      .then(function(r){return r.json()}).then(function(resp){
+        if(resp.status==='ok'){devName.value=''; devAddr.value=''; load()}
+      })
+    })
   }
-  if(connectBtn){ connectBtn.addEventListener('click', ensureSerial) }
   if(scan){
-    scan.addEventListener('click', function(){
-      // 保留按钮，不再调用后端；可根据需要从设备重新加载，本示例仅刷新本地
-      render();
+    scan.addEventListener('click',function(){
+      fetch('/api/dali/scan_devices',{method:'POST'}).then(function(r){return r.json()}).then(function(){load()});
     });
   }
 })
