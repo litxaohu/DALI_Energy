@@ -509,14 +509,13 @@ def dali_send():
             pass
     # Always attempt terminal-based send as well (prints command)
     try:
-        hex_clean = "".join([c for c in instr if c.upper() in "0123456789ABCDEF"])
-        bash_cmd = f"printf $(echo -n {hex_clean} | sed 's/../\\\\x&/g') > {port}"
-        print(f"[DALI] Terminal send: {bash_cmd}")
-        subprocess.run(["bash", "-lc", bash_cmd], check=True)
-        modes.append("terminal")
+        script_path = Path(__file__).resolve().parent / "scripts" / "send_dali_hex.sh"
+        print(f"[DALI] Script send: bash {script_path} {port} {instr}")
+        subprocess.run(["bash", str(script_path), port, instr], check=True)
+        modes.append("script")
         sent = True
     except Exception:
-        modes.append("terminal_error")
+        modes.append("script_error")
     return jsonify({"status": "ok", "instruction": instr, "checksum": instr[-2:], "sent": sent, "mode": "+".join(modes)})
 @app.route('/api/interfaces', methods=['GET'])
 @login_required
