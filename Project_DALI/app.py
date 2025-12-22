@@ -6,6 +6,8 @@ import config
 import threading
 import time
 import math
+import subprocess
+import os
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
@@ -480,6 +482,25 @@ def dali_send():
         except Exception:
             sent = False
             mode = "serial_error"
+    if not sent:
+        try:
+            try:
+                os.chmod(port, 0o666)
+            except Exception:
+                pass
+            with open(port, 'wb', buffering=0) as f:
+                f.write(bytes.fromhex(instr))
+            sent = True
+            mode = "file"
+        except Exception:
+            try:
+                hex_clean = "".join([c for c in instr if c.upper() in "0123456789ABCDEF"])
+                bash_cmd = f"printf $(echo -n {hex_clean} | sed 's/../\\\\x&/g') > {port}"
+                subprocess.run(["bash", "-lc", bash_cmd], check=True)
+                sent = True
+                mode = "bash"
+            except Exception:
+                mode = "error"
     return jsonify({"status": "ok", "instruction": instr, "checksum": instr[-2:], "sent": sent, "mode": mode})
 @app.route('/api/interfaces', methods=['GET'])
 @login_required
