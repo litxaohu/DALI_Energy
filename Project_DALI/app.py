@@ -478,6 +478,34 @@ def add_light():
     write_json('devices.json', devices)
     return jsonify({"status": "ok", "device": new_dev})
 
+@app.route('/api/lights/delete', methods=['POST'])
+@login_required
+def delete_light():
+    data = request.get_json(force=True)
+    dev_id = data.get('id')
+    if dev_id is None:
+        return jsonify({"status": "error", "msg": "缺少设备ID"}), 400
+    devices = read_json('devices.json')
+    before = len(devices)
+    devices = [d for d in devices if d.get('id') != int(dev_id)]
+    if len(devices) == before:
+        return jsonify({"status": "error", "msg": "未找到设备"}), 404
+    write_json('devices.json', devices)
+    return jsonify({"status": "ok"})
+
+@app.route('/api/lights/import', methods=['POST'])
+@login_required
+def import_lights():
+    data = request.get_json(force=True)
+    if not isinstance(data, list):
+        return jsonify({"status": "error", "msg": "格式错误"}), 400
+    required = {"id", "address", "name", "level", "gateway", "port"}
+    for item in data:
+        if not isinstance(item, dict) or not required.issubset(set(item.keys())):
+            return jsonify({"status": "error", "msg": "缺少字段"}), 400
+    write_json('devices.json', data)
+    return jsonify({"status": "ok"})
+
 def _try_import_serial():
     try:
         import serial  # type: ignore

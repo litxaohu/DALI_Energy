@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded',function(){
   var grid=document.getElementById('lights-grid');
   var exportBtn=document.getElementById('export-devices');
+  var importBtn=document.getElementById('import-devices');
+  var importFile=document.getElementById('import-file');
   var portSelect=document.getElementById('port-select');
   var portRefresh=document.getElementById('port-refresh');
   var portConfirm=document.getElementById('port-confirm');
@@ -17,6 +19,14 @@ document.addEventListener('DOMContentLoaded',function(){
       list.forEach(function(d){
         var card=document.createElement('div');
         card.className='device';
+        var del=document.createElement('button');
+        del.className='delete-btn';
+        del.textContent='×';
+        del.title='删除';
+        del.addEventListener('click',function(){
+          fetch('/api/lights/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:d.id})})
+          .then(function(r){return r.json()}).then(function(resp){ if(resp.status==='ok'){ load() } });
+        });
         var name=document.createElement('div');
         name.className='device-name';
         name.textContent=d.name+' (#'+d.address+')'+(d.gateway?' [GW '+d.gateway+']':'');
@@ -49,6 +59,7 @@ document.addEventListener('DOMContentLoaded',function(){
           });
         });
         card.appendChild(name);
+        card.appendChild(del);
         card.appendChild(slider);
         card.appendChild(valueLabel);
         card.appendChild(sendBtn);
@@ -104,5 +115,21 @@ document.addEventListener('DOMContentLoaded',function(){
         setTimeout(function(){ URL.revokeObjectURL(url); a.remove() }, 0);
       })
     })
+  }
+  if(importBtn && importFile){
+    importBtn.addEventListener('click', function(){ importFile.click() });
+    importFile.addEventListener('change', function(){
+      var file=importFile.files[0]; if(!file) return;
+      var reader=new FileReader();
+      reader.onload=function(){
+        try{
+          var data=JSON.parse(reader.result);
+          fetch('/api/lights/import',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+          .then(function(r){return r.json()}).then(function(resp){ if(resp.status==='ok'){ load() } else { alert(resp.msg||'导入失败') } })
+        }catch(e){ alert('文件格式错误') }
+      };
+      reader.readAsText(file);
+      importFile.value='';
+    });
   }
 })
