@@ -4,19 +4,24 @@
   <h2>数据接口</h2>
   <div class="interfaces-grid">
     <div class="card">
-      <h3>MQTT 服务</h3>
-      <form id="mqtt-form">
-        <label>地址 <input type="text" id="mqtt-host" placeholder="localhost"></label>
-        <label>端口 <input type="number" id="mqtt-port" placeholder="1883"></label>
-        <label>用户名 <input type="text" id="mqtt-username"></label>
-        <label>密码 <input type="password" id="mqtt-password"></label>
-        <button type="submit">保存配置</button>
-        <div id="mqtt-status" class="status"></div>
-      </form>
+      <h3>MQTT 输入服务</h3>
+      <div id="inputs-list"></div>
+      <button id="add-input">新增输入服务</button>
     </div>
     <div class="card">
-      <h3>指标配置</h3>
-      <div id="metrics"></div>
+      <h3>MQTT 输出服务</h3>
+      <div id="outputs-list"></div>
+      <button id="save-outputs">保存输出配置</button>
+      <button id="publish-now">立即发布当前数据</button>
+    </div>
+    <div class="card">
+      <h3>测试数据</h3>
+      <label><input type="checkbox" id="test-toggle"> 启用测试模式</label>
+      <textarea id="test-json" rows="10" style="width:100%" placeholder="粘贴 JSON 格式数据"></textarea>
+      <div>
+        <input type="file" id="test-file" accept="application/json">
+        <button id="test-apply">应用测试数据</button>
+      </div>
     </div>
   </div>
 </section>

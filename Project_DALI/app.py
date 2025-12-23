@@ -198,6 +198,45 @@ def energy_realtime():
 @app.route('/api/energy/dashboard', methods=['GET'])
 @login_required
 def energy_dashboard():
+    if app.config.get('TEST_MODE') and app.config.get('TEST_DATA'):
+        td = app.config['TEST_DATA']
+        if isinstance(td, dict):
+            if td.get('summary'):
+                return jsonify(td)
+            elif td.get('data'):
+                mapping = {
+                    "solar_kwh": "data.totals.pv_yield_total",
+                    "battery_total_kwh": "data.battery_status.battery_total_capacity",
+                    "grid_in_kwh": "data.totals.grid_import_total",
+                    "gas_m3": "data.totals.gas_consumption_total",
+                    "water_l": "data.totals.water_consumption_total",
+                    "house_kwh": "data.totals.building_consumption_total",
+                    "grid_to_batt_kwh": "data.power_flow.grid_to_battery",
+                    "grid_to_house_kwh": "data.power_flow.grid_to_building",
+                    "battery_charge_kw": "data.power_flow.battery_charge_power",
+                    "battery_to_house_kw": "data.power_flow.battery_discharge_power",
+                    "battery_soc_percent": "data.battery_status.battery_soc",
+                    "battery_remaining_kwh": "data.battery_status.battery_remaining_energy",
+                    "battery_time_left_h": "data.battery_status.battery_remaining_time",
+                    "realtime_price": "data.market.realtime_price"
+                }
+                summary = _apply_mappings_to_summary(mapping, td)
+                if isinstance(summary.get("water_l"), (int, float)):
+                    summary["water_l"] = round(float(summary["water_l"]) * 1000.0, 2)
+                # Build minimal series if not provided
+                now = time.localtime()
+                times = [f"{i}:00" for i in range(16)]
+                grid = [round(float(summary.get("grid_to_house_kwh", 10)) * 0.8, 2) for _ in times]
+                battery = [round(float(summary.get("battery_to_house_kw", 2)) * 0.5, 2) for _ in times]
+                total = [round(grid[i] + battery[i], 2) for i in range(len(times))]
+                use_grid = [round(g * 0.6, 2) for g in grid]
+                use_batt = [round(b * 0.4, 2) for b in battery]
+                return jsonify({
+                    "summary": summary,
+                    "times": times,
+                    "power_series": {"grid": grid, "battery": battery, "total": total},
+                    "use_series": {"grid": use_grid, "battery": use_batt}
+                })
     cfg = read_json('mqtt.json')
     if isinstance(cfg, dict) and cfg.get('enabled') and app.config.get('MQTT_LAST_DASH'):
         return jsonify(app.config['MQTT_LAST_DASH'])
@@ -567,7 +606,7 @@ def dali_send():
         sent = True
     except Exception:
         modes.append("script_error")
-    return jsonify({"status": "ok", "instruction": instr, "checksum": instr[-2:], "sent": sent, "mode": "+".join(modes)})
+    return jsonify({"status": "ok", "instruction": "+".join(modes) and instr, "checksum": instr[-2:], "sent": sent, "mode": "+".join(modes)})
 
 @app.route('/api/dali/send_hex', methods=['POST'])
 @login_required
@@ -612,6 +651,168 @@ def dali_send_hex():
     except Exception:
         modes.append("script_error")
     return jsonify({"status": "ok", "instruction": hex_clean, "sent": sent, "mode": "+".join(modes)})
+
+# -------- Interfaces rewrite: MQTT inputs/outputs and test data ----------
+def _get_path(obj, path):
+    try:
+        cur = obj
+        for part in str(path).split('.'):
+            if part == '':
+                continue
+            if isinstance(cur, dict):
+                cur = cur.get(part)
+            else:
+                return None
+        return cur
+    except Exception:
+        return None
+
+def _apply_mappings_to_summary(mappings, payload):
+    summary = {}
+    for key, jpath in mappings.items():
+        val = _get_path(payload, jpath)
+        if val is None:
+            continue
+        if key in {"battery_time_left_h"}:
+            try:
+                summary[key] = float(val) / 60.0
+            except Exception:
+                pass
+        else:
+            summary[key] = val
+    return summary
+
+@app.route('/api/interfaces/test/toggle', methods=['POST'])
+@login_required
+def interfaces_test_toggle():
+    data = request.get_json(force=True)
+    enabled = bool(data.get('enabled'))
+    app.config['TEST_MODE'] = enabled
+    return jsonify({"status": "ok", "enabled": enabled})
+
+@app.route('/api/interfaces/test/set', methods=['POST'])
+@login_required
+def interfaces_test_set():
+    data = request.get_json(force=True)
+    if not isinstance(data, dict):
+        return jsonify({"status": "error", "msg": "格式错误"}), 400
+    app.config['TEST_DATA'] = data
+    return jsonify({"status": "ok"})
+
+@app.route('/api/mqtt_inputs', methods=['GET'])
+@login_required
+def mqtt_inputs_get():
+    conf = read_json('mqtt_inputs.json')
+    if not isinstance(conf, list):
+        conf = []
+    return jsonify(conf)
+
+@app.route('/api/mqtt_inputs/save', methods=['POST'])
+@login_required
+def mqtt_inputs_save():
+    data = request.get_json(force=True)
+    if not isinstance(data, list):
+        return jsonify({"status": "error", "msg": "格式错误"}), 400
+    write_json('mqtt_inputs.json', data)
+    return jsonify({"status": "ok"})
+
+@app.route('/api/mqtt_inputs/delete', methods=['POST'])
+@login_required
+def mqtt_inputs_delete():
+    data = request.get_json(force=True)
+    sid = data.get('id')
+    conf = read_json('mqtt_inputs.json')
+    conf = [s for s in conf if s.get('id') != sid]
+    write_json('mqtt_inputs.json', conf)
+    return jsonify({"status": "ok"})
+
+@app.route('/api/mqtt_outputs', methods=['GET'])
+@login_required
+def mqtt_outputs_get():
+    conf = read_json('mqtt_outputs.json')
+    if not isinstance(conf, list):
+        conf = []
+    return jsonify(conf)
+
+@app.route('/api/mqtt_outputs/save', methods=['POST'])
+@login_required
+def mqtt_outputs_save():
+    data = request.get_json(force=True)
+    if not isinstance(data, list):
+        return jsonify({"status": "error", "msg": "格式错误"}), 400
+    write_json('mqtt_outputs.json', data)
+    return jsonify({"status": "ok"})
+
+def _publish_to_outputs(payload):
+    outs = read_json('mqtt_outputs.json')
+    mqtt = _try_import_mqtt()
+    for o in outs if isinstance(outs, list) else []:
+        try:
+            client = mqtt.Client() if mqtt else None
+            if client:
+                if o.get('username'):
+                    client.username_pw_set(o.get('username'), o.get('password'))
+                client.connect(o.get('host','localhost'), int(o.get('port',1883)), 60)
+                client.loop_start()
+                topic = o.get('topic') or 'dali/energy/out'
+                client.publish(topic, json.dumps(payload))
+                client.loop_stop()
+                client.disconnect()
+        except Exception:
+            continue
+
+@app.route('/api/mqtt_outputs/publish_now', methods=['POST'])
+@login_required
+def mqtt_outputs_publish_now():
+    payload = app.config.get('MQTT_LAST_DASH') or app.config.get('TEST_DATA')
+    if not payload:
+        return jsonify({"status":"error","msg":"无数据"}), 400
+    _publish_to_outputs(payload)
+    return jsonify({"status":"ok"})
+
+def _start_mqtt_service(service):
+    mqtt = _try_import_mqtt()
+    if not mqtt:
+        return
+    client = mqtt.Client()
+    if service.get('username'):
+        client.username_pw_set(service.get('username'), service.get('password'))
+    mappings_by_topic = {}
+    for t in service.get('topics', []):
+        if t.get('mapping'):
+            mappings_by_topic[t.get('topic')] = t.get('mapping')
+    def on_connect(c, userdata, flags, rc):
+        if rc == 0:
+            for t in service.get('topics', []):
+                if t.get('topic'):
+                    c.subscribe(t.get('topic'))
+    def on_message(c, userdata, msg):
+        try:
+            payload = json.loads(msg.payload.decode('utf-8'))
+            mapping = mappings_by_topic.get(msg.topic) or {}
+            summary = _apply_mappings_to_summary(mapping, payload)
+            if summary:
+                base = app.config.get('MQTT_LAST_DASH') or {"summary": {}, "times": [], "power_series": {}, "use_series": {}}
+                base["summary"] = {**base.get("summary", {}), **summary}
+                app.config['MQTT_LAST_DASH'] = base
+        except Exception:
+            pass
+    client.on_connect = on_connect
+    client.on_message = on_message
+    try:
+        client.connect(service.get('host','localhost'), int(service.get('port',1883)), 60)
+        threading.Thread(target=client.loop_forever, daemon=True).start()
+        app.config.setdefault('MQTT_INPUT_CLIENTS', {})[service.get('id')] = client
+    except Exception:
+        pass
+
+@app.route('/api/mqtt_inputs/start', methods=['POST'])
+@login_required
+def mqtt_inputs_start():
+    conf = read_json('mqtt_inputs.json')
+    for s in conf if isinstance(conf, list) else []:
+        _start_mqtt_service(s)
+    return jsonify({"status":"ok"})
 @app.route('/api/interfaces', methods=['GET'])
 @login_required
 def interfaces_get():
