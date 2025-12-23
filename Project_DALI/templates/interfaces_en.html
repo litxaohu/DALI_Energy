@@ -1,0 +1,28 @@
+{% extends 'base_en.html' %}
+{% block content %}
+<section class="panel">
+  <h2>Data Interfaces</h2>
+  <div class="interfaces-grid">
+    <div class="card">
+      <h3>MQTT Input Services</h3>
+      <div id="inputs-list"></div>
+      <button id="add-input">Add Input Service</button>
+    </div>
+    <div class="card">
+      <h3>MQTT Output Services</h3>
+      <div id="outputs-list"></div>
+      <button id="save-outputs">Save Outputs</button>
+      <button id="publish-now">Publish Current Data</button>
+    </div>
+    <div class="card">
+      <h3>Test Data</h3>
+      <label><input type="checkbox" id="test-toggle"> Enable Test Mode</label>
+      <textarea id="test-json" rows="10" style="width:100%" placeholder="Paste JSON here"></textarea>
+      <div>
+        <input type="file" id="test-file" accept="application/json">
+        <button id="test-apply">Apply Test Data</button>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

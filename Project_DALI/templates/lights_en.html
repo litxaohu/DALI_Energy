@@ -1,0 +1,27 @@
+{% extends 'base_en.html' %}
+{% block content %}
+<section class="panel">
+  <h2>Lighting Control</h2>
+  <div class="controls">
+    <div>
+      <label>Serial</label>
+      <select id="port-select"></select>
+      <button id="port-refresh">Refresh Ports</button>
+      <button id="port-confirm">Confirm Port</button>
+      <span id="port-status" class="serial-status">Not set</span>
+    </div>
+    <div class="add-form">
+      <input type="text" id="gw-hex" placeholder="Gateway (hex, e.g. 01)" value="01">
+      <input type="text" id="dev-addr-hex" placeholder="Device No. (hex, e.g. 06)">
+      <input type="text" id="dev-name" placeholder="Light Name">
+      <button id="add-light">Add Light</button>
+    </div>
+    <div class="hint">Cmd: 28 + 01 + GW + 12 + (Device×2→hex) + Level(0-255) + Checksum</div>
+  </div>
+  <div id="lights-grid" class="lights-grid"></div>
+  <div class="actions">
+    <button id="export-devices">Export Devices</button>
+    <button id="import-devices">Import Devices</button>
+    <input type="file" id="import-file" accept="application/json" style="display:none">
+  </div>
+{% endblock %}

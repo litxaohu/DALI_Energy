@@ -1,36 +1,35 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DALI 控制台</title>
+  <title>DALI Console</title>
   <link rel="stylesheet" href="/static/css/style.css">
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">DALI 能源</div>
+    <div class="brand">DALI Energy</div>
     <nav class="nav">
       <select id="lang-select">
         <option value="zh">中文</option>
-        <option value="en">English</option>
+        <option value="en" selected>English</option>
       </select>
-      <a href="/logout" class="nav-link" id="logout">退出</a>
+      <a href="/logout" class="nav-link" id="logout">Logout</a>
     </nav>
   </header>
   <div class="layout">
     <aside class="sidebar">
-      <a href="/lights" class="side-link">灯光控制</a>
-      <a href="/scenes" class="side-link">场景控制</a>
-      <a href="/energy" class="side-link">能源看板</a>
-      <a href="/interfaces" class="side-link">数据接口</a>
-      <a href="/users" class="side-link">用户管理</a>
+      <a href="/en/lights" class="side-link">Lighting</a>
+      <a href="/en/scenes" class="side-link">Scenes</a>
+      <a href="/en/energy" class="side-link">Energy</a>
+      <a href="/en/interfaces" class="side-link">Interfaces</a>
+      <a href="/en/users" class="side-link">Users</a>
     </aside>
     <main class="content">
       {% block content %}{% endblock %}
     </main>
   </div>
-  <script src="/static/js/auth.js"></script>
   <script src="/static/js/auth.js"></script>
   <script src="/static/js/lights.js"></script>
   <script src="/static/js/scenes.js"></script>

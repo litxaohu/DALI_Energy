@@ -11,7 +11,6 @@ import os
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
-
 def read_json(name):
     p = Path(config.DATA_DIR) / name
     if not p.exists():
@@ -64,25 +63,45 @@ def logout():
 @login_required
 def lights_page():
     return render_template('lights.html')
+@app.route('/en/lights')
+@login_required
+def lights_page_en():
+    return render_template('lights_en.html')
 
 @app.route('/scenes')
 @login_required
 def scenes_page():
     return render_template('scenes.html')
+@app.route('/en/scenes')
+@login_required
+def scenes_page_en():
+    return render_template('scenes_en.html')
 
 @app.route('/energy')
 @login_required
 def energy_page():
     return render_template('energy.html')
+@app.route('/en/energy')
+@login_required
+def energy_page_en():
+    return render_template('energy_en.html')
 
 @app.route('/users')
 @login_required
 def users_page():
     return render_template('users.html')
+@app.route('/en/users')
+@login_required
+def users_page_en():
+    return render_template('users_en.html')
 @app.route('/interfaces')
 @login_required
 def interfaces_page():
     return render_template('interfaces.html')
+@app.route('/en/interfaces')
+@login_required
+def interfaces_page_en():
+    return render_template('interfaces_en.html')
 
 @app.route('/api/system/scan_ports', methods=['GET'])
 @login_required

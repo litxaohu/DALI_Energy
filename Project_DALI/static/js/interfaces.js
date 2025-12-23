@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded',function(){
+  var isEN = location.pathname.indexOf('/en/')===0;
   var inputsBox=document.getElementById('inputs-list');
   var addInput=document.getElementById('add-input');
   var outputsBox=document.getElementById('outputs-list');
@@ -10,32 +11,32 @@ document.addEventListener('DOMContentLoaded',function(){
   var testApply=document.getElementById('test-apply');
   if(!inputsBox){return}
   var metricOptions=[
-    {key:'solar_kwh', label:'光伏发电总量'},
-    {key:'battery_total_kwh', label:'电池合计'},
-    {key:'grid_in_kwh', label:'电网合计'},
-    {key:'gas_m3', label:'燃气总计'},
-    {key:'water_l', label:'自来水总量'},
-    {key:'grid_to_batt_kwh', label:'电网向电池输入电量'},
-    {key:'grid_to_house_kwh', label:'电网向建筑输入电量'},
-    {key:'house_kwh', label:'建筑用电总量'},
-    {key:'battery_charge_kw', label:'电池充电量(功率)'},
-    {key:'battery_to_house_kw', label:'电池用电量(功率)'},
-    {key:'battery_soc_percent', label:'电池剩余电量百分比'},
-    {key:'battery_remaining_kwh', label:'电池剩余电量'},
-    {key:'battery_time_left_h', label:'电池剩余使用时间(小时)'},
-    {key:'realtime_price', label:'实时电价'}
+    {key:'solar_kwh', label:(isEN?'PV Yield Total':'光伏发电总量')},
+    {key:'battery_total_kwh', label:(isEN?'Battery Total':'电池合计')},
+    {key:'grid_in_kwh', label:(isEN?'Grid Import Total':'电网合计')},
+    {key:'gas_m3', label:(isEN?'Gas Total':'燃气总计')},
+    {key:'water_l', label:(isEN?'Water Total':'自来水总量')},
+    {key:'grid_to_batt_kwh', label:(isEN?'Grid → Battery Energy':'电网向电池输入电量')},
+    {key:'grid_to_house_kwh', label:(isEN?'Grid → Building Energy':'电网向建筑输入电量')},
+    {key:'house_kwh', label:(isEN?'Building Consumption Total':'建筑用电总量')},
+    {key:'battery_charge_kw', label:(isEN?'Battery Charge (kW)':'电池充电量(功率)')},
+    {key:'battery_to_house_kw', label:(isEN?'Battery to House (kW)':'电池用电量(功率)')},
+    {key:'battery_soc_percent', label:(isEN?'Battery SOC (%)':'电池剩余电量百分比')},
+    {key:'battery_remaining_kwh', label:(isEN?'Battery Remaining Energy':'电池剩余电量')},
+    {key:'battery_time_left_h', label:(isEN?'Battery Remaining Time (h)':'电池剩余使用时间(小时)')},
+    {key:'realtime_price', label:(isEN?'Realtime Price':'实时电价')}
   ];
   function renderInputs(list){
     inputsBox.innerHTML='';
     list.forEach(function(s,si){
       var card=document.createElement('div'); card.className='metric-item';
       var head=document.createElement('div'); head.className='metric-row';
-      var name=document.createElement('input'); name.value=s.name||('服务'+(si+1)); name.placeholder='服务名称';
-      var host=document.createElement('input'); host.placeholder='地址'; host.value=s.host||'localhost';
-      var port=document.createElement('input'); port.placeholder='端口'; port.type='number'; port.value=s.port||1883;
-      var user=document.createElement('input'); user.placeholder='用户名'; user.value=s.username||'';
-      var pass=document.createElement('input'); pass.placeholder='密码'; pass.type='password'; pass.value=s.password||'';
-      var del=document.createElement('button'); del.textContent='删除服务';
+      var name=document.createElement('input'); name.value=s.name||(isEN?('Service'+(si+1)):('服务'+(si+1))); name.placeholder=(isEN?'Service Name':'服务名称');
+      var host=document.createElement('input'); host.placeholder=(isEN?'Address':'地址'); host.value=s.host||'localhost';
+      var port=document.createElement('input'); port.placeholder=(isEN?'Port':'端口'); port.type='number'; port.value=s.port||1883;
+      var user=document.createElement('input'); user.placeholder=(isEN?'Username':'用户名'); user.value=s.username||'';
+      var pass=document.createElement('input'); pass.placeholder=(isEN?'Password':'密码'); pass.type='password'; pass.value=s.password||'';
+      var del=document.createElement('button'); del.textContent=(isEN?'Delete Service':'删除服务');
       del.addEventListener('click',function(){
         fetch('/api/mqtt_inputs/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:s.id})})
         .then(function(r){return r.json()}).then(function(){loadAll()});
@@ -45,8 +46,8 @@ document.addEventListener('DOMContentLoaded',function(){
       var topicsBox=document.createElement('div');
       (s.topics||[]).forEach(function(t,ti){
         var row=document.createElement('div'); row.className='metric-row';
-        var topic=document.createElement('input'); topic.placeholder='订阅主题'; topic.value=t.topic||'';
-        var delT=document.createElement('button'); delT.textContent='删除主题';
+        var topic=document.createElement('input'); topic.placeholder=(isEN?'Subscribe Topic':'订阅主题'); topic.value=t.topic||'';
+        var delT=document.createElement('button'); delT.textContent=(isEN?'Delete Topic':'删除主题');
         delT.addEventListener('click',function(){
           (s.topics||[]).splice(ti,1); saveInputs(list);
         });
@@ -55,7 +56,7 @@ document.addEventListener('DOMContentLoaded',function(){
         metricOptions.forEach(function(opt){
           var line=document.createElement('div'); line.style.display='flex'; line.style.gap='6px'; line.style.margin='4px 0';
           var selLabel=document.createElement('span'); selLabel.textContent=opt.label;
-          var path=document.createElement('input'); path.placeholder='JSON路径 (如 data.market.realtime_price)';
+          var path=document.createElement('input'); path.placeholder=(isEN?'JSON Path (e.g. data.market.realtime_price)':'JSON路径 (如 data.market.realtime_price)');
           path.value=(t.mapping && t.mapping[opt.key])||'';
           line.appendChild(selLabel); line.appendChild(path);
           mapBox.appendChild(line);
@@ -67,18 +68,18 @@ document.addEventListener('DOMContentLoaded',function(){
         card.appendChild(row);
         card.appendChild(mapBox);
       });
-      var addTopic=document.createElement('button'); addTopic.textContent='新增主题';
+      var addTopic=document.createElement('button'); addTopic.textContent=(isEN?'Add Topic':'新增主题');
       addTopic.addEventListener('click',function(){
         s.topics = s.topics || [];
         s.topics.push({topic:'', mapping:{}});
         saveInputs(list);
       });
-      var saveBtn=document.createElement('button'); saveBtn.textContent='保存服务';
+      var saveBtn=document.createElement('button'); saveBtn.textContent=(isEN?'Save Service':'保存服务');
       saveBtn.addEventListener('click',function(){
         s.name=name.value; s.host=host.value; s.port=Number(port.value||1883); s.username=user.value; s.password=pass.value;
         saveInputs(list);
       });
-      var startBtn=document.createElement('button'); startBtn.textContent='启动订阅';
+      var startBtn=document.createElement('button'); startBtn.textContent=(isEN?'Start Subscribe':'启动订阅');
       startBtn.addEventListener('click',function(){
         fetch('/api/mqtt_inputs/start',{method:'POST'}).then(function(r){return r.json()});
       });
@@ -94,18 +95,18 @@ document.addEventListener('DOMContentLoaded',function(){
     outputsBox.innerHTML='';
     list.forEach(function(o,oi){
       var row=document.createElement('div'); row.className='metric-row';
-      var host=document.createElement('input'); host.placeholder='地址'; host.value=o.host||'localhost';
-      var port=document.createElement('input'); port.placeholder='端口'; port.type='number'; port.value=o.port||1883;
-      var user=document.createElement('input'); user.placeholder='用户名'; user.value=o.username||'';
-      var pass=document.createElement('input'); pass.placeholder='密码'; pass.type='password'; pass.value=o.password||'';
-      var topic=document.createElement('input'); topic.placeholder='主题'; topic.value=o.topic||'dali/energy/out';
-      var del=document.createElement('button'); del.textContent='删除';
+      var host=document.createElement('input'); host.placeholder=(isEN?'Address':'地址'); host.value=o.host||'localhost';
+      var port=document.createElement('input'); port.placeholder=(isEN?'Port':'端口'); port.type='number'; port.value=o.port||1883;
+      var user=document.createElement('input'); user.placeholder=(isEN?'Username':'用户名'); user.value=o.username||'';
+      var pass=document.createElement('input'); pass.placeholder=(isEN?'Password':'密码'); pass.type='password'; pass.value=o.password||'';
+      var topic=document.createElement('input'); topic.placeholder=(isEN?'Topic':'主题'); topic.value=o.topic||'dali/energy/out';
+      var del=document.createElement('button'); del.textContent=(isEN?'Delete':'删除');
       del.addEventListener('click',function(){ list.splice(oi,1); saveOutputsFn(list) });
       row.appendChild(host); row.appendChild(port); row.appendChild(user); row.appendChild(pass); row.appendChild(topic); row.appendChild(del);
       outputsBox.appendChild(row);
       host.addEventListener('input',function(){ o.host=host.value }); port.addEventListener('input',function(){ o.port=Number(port.value||1883) }); user.addEventListener('input',function(){ o.username=user.value }); pass.addEventListener('input',function(){ o.password=pass.value }); topic.addEventListener('input',function(){ o.topic=topic.value });
     });
-    var add=document.createElement('button'); add.textContent='新增输出服务'; add.addEventListener('click',function(){ list.push({host:'localhost',port:1883,username:'',password:'',topic:'dali/energy/out'}); saveOutputsFn(list) });
+    var add=document.createElement('button'); add.textContent=(isEN?'Add Output Service':'新增输出服务'); add.addEventListener('click',function(){ list.push({host:'localhost',port:1883,username:'',password:'',topic:'dali/energy/out'}); saveOutputsFn(list) });
     outputsBox.appendChild(add);
     if(saveOutputs){ saveOutputs.onclick=function(){ saveOutputsFn(list) } }
     if(publishNow){ publishNow.onclick=function(){ fetch('/api/mqtt_outputs/publish_now',{method:'POST'}).then(function(r){return r.json()}) } }

@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded',function(){
+  var isEN = location.pathname.indexOf('/en/')===0;
   var box=document.getElementById('scenes');
   var portSelect=document.getElementById('scene-port-select');
   var portRefresh=document.getElementById('scene-port-refresh');
@@ -29,10 +30,10 @@ document.addEventListener('DOMContentLoaded',function(){
   loadPorts();
   function sendHex(hex){
     var p = activePort || selectedPort;
-    if(!p){ alert('请先确认串口'); return }
+    if(!p){ alert(isEN?'Please confirm serial port first':'请先确认串口'); return }
     fetch('/api/dali/send_hex',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({port:p, hex:hex})})
     .then(function(r){return r.json()}).then(function(resp){
-      if(resp.status==='ok'){ info.textContent='发送指令: '+hex+' (mode: '+resp.mode+')' }
+      if(resp.status==='ok'){ info.textContent=(isEN?'Sent command: ':'发送指令: ')+hex+' (mode: '+resp.mode+')' }
     });
   }
   if(btnOn){ btnOn.addEventListener('click', function(){ sendHex('28010112fefe38') }) }

@@ -27,28 +27,34 @@
 
 ## Web 使用概览
 
+![image](./docs/images/light-control.png)
+
 - 灯光控制
   - 选择并确认串口：`/dev/ttyAMA2`、`/dev/ttyAMA3`、`/dev/ttyAMA4`
   - 添加灯具：名称、网关地址（十六进制，如 `01`）、设备号（十六进制，如 `06`）
   - 控制亮度并点击“发送”即通过后端串口下发十六进制指令
   - 导出/导入设备配置（`data/devices.json`）
+
+![image](./docs/images/scenes-control.png)
+
 - 场景控制
   - 同步提供串口确认功能
   - 一键开启全部灯光：`28010112fefe38`
   - 一键关闭全部灯光：`28010112fe003a`
+
+![image](./docs/images/energy-dashboard.png)
+
 - 能源看板
   - 实时功率曲线与用量统计（仅电网/电池/建筑）
   - 电价/电费历史：周期切换，单位切换（元/$/€），点击“刷新”拉取
   - 测试模式：粘贴/上传 JSON 后“应用测试数据”，立即显示
+
+![image](./docs/images/interfaces.png)
+
 - 数据接口（MQTT）
   - 输入：可新增多个服务，每个服务可订阅多个主题并为“看板字段→JSON路径”建立映射（如 `realtime_price ← data.market.realtime_price`）
   - 输出：配置多个输出服务，一键“立即发布当前数据”到指定主题
 
-> 截图参考（将图片放置于 `docs/images/` 目录并替换下方链接）：
-> - 灯光控制界面：`docs/images/lights-control.png`
-> - 场景控制界面：`docs/images/scenes-control.png`
-> - 能源看板界面：`docs/images/energy-dashboard.png`
-> - 数据接口界面：`docs/images/interfaces.png`
 
 ## 十六进制指令说明（串口）
 

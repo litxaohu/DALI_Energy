@@ -1,0 +1,19 @@
+{% extends 'base_en.html' %}
+{% block content %}
+<section class="panel">
+  <h2>Scene Control</h2>
+  <div class="controls">
+    <div>
+      <label>Serial</label>
+      <select id="scene-port-select"></select>
+      <button id="scene-port-refresh">Refresh Ports</button>
+      <button id="scene-port-confirm">Confirm Port</button>
+      <span id="scene-port-status" class="serial-status">Not set</span>
+    </div>
+  </div>
+  <div id="scenes" class="scenes">
+    <button id="btn-all-on">Turn All On</button>
+    <button id="btn-all-off">Turn All Off</button>
+    <div id="scene-send-info" style="margin-top:8px;font-size:12px;color:#6b7280"></div>
+  </div>
+{% endblock %}

@@ -1,4 +1,5 @@
 document.addEventListener('DOMContentLoaded',function(){
+  var isEN = location.pathname.indexOf('/en/')===0;
   var grid=document.getElementById('lights-grid');
   var exportBtn=document.getElementById('export-devices');
   var importBtn=document.getElementById('import-devices');
@@ -22,7 +23,7 @@ document.addEventListener('DOMContentLoaded',function(){
         var del=document.createElement('button');
         del.className='delete-btn';
         del.textContent='×';
-        del.title='删除';
+        del.title= isEN ? 'Delete' : '删除';
         del.addEventListener('click',function(){
           fetch('/api/lights/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:d.id})})
           .then(function(r){return r.json()}).then(function(resp){ if(resp.status==='ok'){ load() } });
@@ -36,11 +37,11 @@ document.addEventListener('DOMContentLoaded',function(){
         slider.max='254';
         slider.value=String(d.level||0);
         var valueLabel=document.createElement('div');
-        valueLabel.textContent='亮度: '+slider.value;
+        valueLabel.textContent=(isEN?'Brightness: ':'亮度: ')+slider.value;
         var instr=document.createElement('div');
         instr.style.fontSize='12px'; instr.style.color='#6b7280';
         var sendBtn=document.createElement('button');
-        sendBtn.textContent='发送';
+        sendBtn.textContent= isEN ? 'Send' : '发送';
         sendBtn.style.marginTop='6px';
         sendBtn.style.padding='6px 10px';
         sendBtn.style.border='none';
@@ -48,14 +49,14 @@ document.addEventListener('DOMContentLoaded',function(){
         sendBtn.style.background='#2563eb';
         sendBtn.style.color='#fff';
         slider.addEventListener('input',function(){
-          valueLabel.textContent='亮度: '+slider.value;
+          valueLabel.textContent=(isEN?'Brightness: ':'亮度: ')+slider.value;
         });
         sendBtn.addEventListener('click',function(){
           var p = activePort || selectedPort;
-          if(!p){ alert('请先确认串口'); return }
+          if(!p){ alert(isEN?'Please confirm serial port first':'请先确认串口'); return }
           fetch('/api/dali/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({port:p,gateway_hex:(d.gateway||'01'),address_dec:d.address,level:Number(slider.value)})})
           .then(function(r){return r.json()}).then(function(resp){
-            if(resp.status==='ok'){instr.textContent='发送指令: '+(resp.instruction||'')+' (mode: '+resp.mode+')';}
+            if(resp.status==='ok'){instr.textContent=(isEN?'Sent command: ':'发送指令: ') + (resp.instruction||'')+' (mode: '+resp.mode+')';}
           });
         });
         card.appendChild(name);
