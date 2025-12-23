@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded',function(){
   var grid=document.getElementById('lights-grid');
-  var scan=document.getElementById('scan-devices');
+  var exportBtn=document.getElementById('export-devices');
   var portSelect=document.getElementById('port-select');
   var portRefresh=document.getElementById('port-refresh');
   var portConfirm=document.getElementById('port-confirm');
@@ -93,9 +93,16 @@ document.addEventListener('DOMContentLoaded',function(){
       })
     })
   }
-  if(scan){
-    scan.addEventListener('click',function(){
-      fetch('/api/dali/scan_devices',{method:'POST'}).then(function(r){return r.json()}).then(function(){load()});
-    });
+  if(exportBtn){
+    exportBtn.addEventListener('click', function(){
+      fetch('/api/lights').then(function(r){return r.json()}).then(function(list){
+        var blob=new Blob([JSON.stringify(list,null,2)],{type:'application/json'});
+        var url=URL.createObjectURL(blob);
+        var a=document.createElement('a');
+        a.href=url; a.download='devices.json';
+        document.body.appendChild(a); a.click();
+        setTimeout(function(){ URL.revokeObjectURL(url); a.remove() }, 0);
+      })
+    })
   }
 })
