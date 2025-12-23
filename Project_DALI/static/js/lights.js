@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded',function(){
         var slider=document.createElement('input');
         slider.type='range';
         slider.min='0';
-        slider.max='255';
+        slider.max='254';
         slider.value=String(d.level||0);
         var valueLabel=document.createElement('div');
         valueLabel.textContent='亮度: '+slider.value;
