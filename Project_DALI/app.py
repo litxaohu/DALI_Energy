@@ -568,6 +568,50 @@ def dali_send():
     except Exception:
         modes.append("script_error")
     return jsonify({"status": "ok", "instruction": instr, "checksum": instr[-2:], "sent": sent, "mode": "+".join(modes)})
+
+@app.route('/api/dali/send_hex', methods=['POST'])
+@login_required
+def dali_send_hex():
+    data = request.get_json(force=True)
+    port = data.get('port') or app.config.get('ACTIVE_PORT') or "/dev/ttyAMA3"
+    hex_str = data.get('hex') or ''
+    hex_clean = "".join([c for c in str(hex_str) if c.upper() in "0123456789ABCDEF"])
+    if not hex_clean:
+        return jsonify({"status": "error", "msg": "hex为空"}), 400
+    print(f"[DALI] Send RAW HEX {hex_clean} to {port}")
+    serial = _try_import_serial()
+    sent = False
+    modes = []
+    try:
+        if serial:
+            ser = serial.Serial(port, baudrate=9600, bytesize=8, parity='N', stopbits=1, timeout=1)
+            ser.write(bytes.fromhex(hex_clean))
+            ser.close()
+            sent = True
+            modes.append("serial")
+    except Exception:
+        modes.append("serial_error")
+    if not sent:
+        try:
+            try:
+                os.chmod(port, 0o666)
+            except Exception:
+                pass
+            with open(port, 'wb', buffering=0) as f:
+                f.write(bytes.fromhex(hex_clean))
+            sent = True
+            modes.append("file")
+        except Exception:
+            pass
+    try:
+        script_path = Path(__file__).resolve().parent / "scripts" / "send_dali_hex.sh"
+        print(f"[DALI] Script send: bash {script_path} {port} {hex_clean}")
+        subprocess.run(["bash", str(script_path), port, hex_clean], check=True)
+        modes.append("script")
+        sent = True
+    except Exception:
+        modes.append("script_error")
+    return jsonify({"status": "ok", "instruction": hex_clean, "sent": sent, "mode": "+".join(modes)})
 @app.route('/api/interfaces', methods=['GET'])
 @login_required
 def interfaces_get():

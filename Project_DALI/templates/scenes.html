@@ -2,5 +2,18 @@
 {% block content %}
 <section class="panel">
   <h2>场景控制</h2>
-  <div id="scenes" class="scenes"></div>
+  <div class="controls">
+    <div>
+      <label>串口</label>
+      <select id="scene-port-select"></select>
+      <button id="scene-port-refresh">刷新串口</button>
+      <button id="scene-port-confirm">确认串口</button>
+      <span id="scene-port-status" class="serial-status">未设置</span>
+    </div>
+  </div>
+  <div id="scenes" class="scenes">
+    <button id="btn-all-on">开启全部灯光</button>
+    <button id="btn-all-off">关闭全部灯光</button>
+    <div id="scene-send-info" style="margin-top:8px;font-size:12px;color:#6b7280"></div>
+  </div>
 {% endblock %}
