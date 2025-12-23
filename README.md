@@ -1,4 +1,105 @@
+<div align="right">
+
+<a href="./docs/README.en.md"><img src="https://img.shields.io/badge/English-Doc-blue" alt="English Doc"></a>
+<a href="./docs/README.zh.md"><img src="https://img.shields.io/badge/中文-文档-green" alt="中文文档"></a>
+
+</div>
+
 # DALI 灯光与能源管理应用
+
+一个面向网关部署的 DALI 灯光与能源管理 Web 应用。集成串口灯光控制、场景控制、能源看板、MQTT 数据输入/输出与测试数据注入，适合本地网关与局域网使用，并支持二次开发扩展。
+
+- 语言切换：English | 中文
+  - English: ./docs/README.en.md
+  - 中文: ./docs/README.zh.md
+
+## 快速开始
+
+- 运行环境
+  - Python 3.9+（建议 3.11）
+  - 依赖：`Flask`、`pyserial`、`paho-mqtt`（可选）
+- 安装依赖
+  - `pip install -r Project_DALI/requirements.txt`
+- 启动服务
+  - `python Project_DALI/app.py`
+  - 打开浏览器访问 `http://localhost:5050/`
+  - 登录账号与密码请在 `Project_DALI/config.py` 中配置
+
+## Web 使用概览
+
+- 灯光控制
+  - 选择并确认串口：`/dev/ttyAMA2`、`/dev/ttyAMA3`、`/dev/ttyAMA4`
+  - 添加灯具：名称、网关地址（十六进制，如 `01`）、设备号（十六进制，如 `06`）
+  - 控制亮度并点击“发送”即通过后端串口下发十六进制指令
+  - 导出/导入设备配置（`data/devices.json`）
+- 场景控制
+  - 同步提供串口确认功能
+  - 一键开启全部灯光：`28010112fefe38`
+  - 一键关闭全部灯光：`28010112fe003a`
+- 能源看板
+  - 实时功率曲线与用量统计（仅电网/电池/建筑）
+  - 电价/电费历史：周期切换，单位切换（元/$/€），点击“刷新”拉取
+  - 测试模式：粘贴/上传 JSON 后“应用测试数据”，立即显示
+- 数据接口（MQTT）
+  - 输入：可新增多个服务，每个服务可订阅多个主题并为“看板字段→JSON路径”建立映射（如 `realtime_price ← data.market.realtime_price`）
+  - 输出：配置多个输出服务，一键“立即发布当前数据”到指定主题
+
+> 截图参考（将图片放置于 `docs/images/` 目录并替换下方链接）：
+> - 灯光控制界面：`docs/images/lights-control.png`
+> - 场景控制界面：`docs/images/scenes-control.png`
+> - 能源看板界面：`docs/images/energy-dashboard.png`
+> - 数据接口界面：`docs/images/interfaces.png`
+
+## 十六进制指令说明（串口）
+
+- 格式：`28 + 01 + 网关地址 + 12 + 设备地址 + 控制指令 + 校验和`
+- 设备地址规则：设备号（十六进制输入）× 2 → 十六进制。例如设备号 `06` → 地址 `0C`
+- 校验和：前六字节（不含校验位）逐字节累加取低字节
+- 示例：设备号 `63`（十进制）→ `7E`（×2 后）
+  - 指令：`280101127E00BA`
+
+## 目录结构概览
+
+```
+DALI_Energy/
+├── Project_DALI/
+│   ├── app.py                # Flask 入口与路由
+│   ├── config.py             # 站点配置（HOST/PORT/SECRET/账户等）
+│   ├── templates/            # 页面模板（灯光/场景/能源/接口）
+│   ├── static/
+│   │   ├── js/               # 前端逻辑（lights/scenes/energy/interfaces）
+│   │   └── css/              # 样式（响应式、图例、控件）
+│   ├── data/                 # JSON 数据（devices/mqtt_inputs/mqtt_outputs）
+│   └── scripts/              # 发送脚本（send_dali_hex.sh）
+└── docs/
+    ├── README.en.md          # 英文使用与开发文档
+    └── README.zh.md          # 中文使用与开发文档
+```
+
+## 二次开发建议
+
+- 前端
+  - 统一在 `static/js/*.js` 进行交互逻辑开发；保持 UI 与数据结构一致性
+  - 能源看板的数据结构：`{ summary, times, power_series, use_series }`
+- 后端
+  - 新增接口直接在 `app.py` 中按现有模式注册路由
+  - 数据文件使用 `data/*.json` 管理，读写工具 `read_json/write_json`
+  - 串口发送优先 `pyserial`，失败回退 `open(...,'wb')` 或 `bash scripts/send_dali_hex.sh`
+- 安全与日志
+  - 生产环境请替换默认密钥与账户
+  - 串口权限建议通过 udev 规则或专用用户组管理
+
+## 贡献与许可
+
+- 欢迎提交 Issue 与 PR
+- 使用时请保留版权与许可声明（MIT/Apache-2.0 等，按实际设置）
+
+---
+
+切换至详细文档：
+
+- English Doc → [docs/README.en.md](./docs/README.en.md)
+- 中文文档 → [docs/README.zh.md](./docs/README.zh.md)
 
 基于 Python + Flask 的轻量级 Web 应用，用于演示 DALI 灯光控制与能源看板。项目使用本地 JSON 文件作为临时数据存储，提供登录认证、设备发现、灯光控制、场景应用与能源实时数据等基础功能。默认监听 `0.0.0.0:5050`。
 
