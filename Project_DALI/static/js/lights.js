@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded',function(){
   var portConfirm=document.getElementById('port-confirm');
   var portStatus=document.getElementById('port-status');
   var gwHex=document.getElementById('gw-hex');
-  var devAddr=document.getElementById('dev-addr');
+  var devAddrHex=document.getElementById('dev-addr-hex');
   var devName=document.getElementById('dev-name');
   var addBtn=document.getElementById('add-light');
   var selectedPort='/dev/ttyAMA3';
@@ -79,14 +79,15 @@ document.addEventListener('DOMContentLoaded',function(){
   if(addBtn){
     addBtn.addEventListener('click',function(){
       var name=(devName.value||'').trim();
-      var addrStr=(devAddr.value||'').trim();
-      var addr=Number(addrStr);
-      if(addrStr==='' || isNaN(addr)){return}
+      var addrHex=(devAddrHex.value||'').trim();
+      if(addrHex===''){return}
+      var addr=parseInt(addrHex,16);
+      if(isNaN(addr)){alert('设备号需为十六进制');return}
       var gw=(gwHex.value||'01').trim();
       if(!name){return}
-      fetch('/api/lights/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,address_dec:addr,gateway_hex:gw,port:selectedPort})})
+      fetch('/api/lights/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,address_hex:addrHex,gateway_hex:gw,port:selectedPort})})
       .then(function(r){return r.json()}).then(function(resp){
-        if(resp.status==='ok'){devName.value=''; devAddr.value=''; load()} else {
+        if(resp.status==='ok'){devName.value=''; devAddrHex.value=''; load()} else {
           alert(resp.msg||'添加失败');
         }
       })

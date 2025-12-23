@@ -452,16 +452,28 @@ def _build_instruction(gateway_hex, device_addr_dec, level):
 def add_light():
     data = request.get_json(force=True)
     name = data.get('name')
+    address_hex = data.get('address_hex')
     address_dec = data.get('address_dec')
     gateway_hex = (data.get('gateway_hex') or "01").upper()
     port = data.get('port') or "/dev/ttyAMA3"
-    if not name or address_dec is None:
+    dev_no = None
+    if address_hex:
+        try:
+            dev_no = int(str(address_hex), 16)
+        except Exception:
+            dev_no = None
+    elif address_dec is not None:
+        try:
+            dev_no = int(address_dec)
+        except Exception:
+            dev_no = None
+    if not name or dev_no is None:
         return jsonify({"status": "error", "msg": "缺少参数"}), 400
     devices = read_json('devices.json')
     for d in devices:
-        if d.get('address') == int(address_dec):
+        if d.get('address') == int(dev_no):
             return jsonify({"status": "error", "msg": "地址已存在"}), 400
-    new_dev = {"id": (max([x.get('id',0) for x in devices]) + 1 if devices else 1), "address": int(address_dec), "name": name, "level": 0, "gateway": gateway_hex, "port": port}
+    new_dev = {"id": (max([x.get('id',0) for x in devices]) + 1 if devices else 1), "address": int(dev_no), "name": name, "level": 0, "gateway": gateway_hex, "port": port}
     devices.append(new_dev)
     write_json('devices.json', devices)
     return jsonify({"status": "ok", "device": new_dev})
@@ -479,9 +491,20 @@ def dali_send():
     data = request.get_json(force=True)
     port = data.get('port') or app.config.get('ACTIVE_PORT') or "/dev/ttyAMA3"
     gateway_hex = (data.get('gateway_hex') or "01").upper()
-    address_dec = int(data.get('address_dec') or 0)
+    address_hex = data.get('address_hex')
+    address_dec = data.get('address_dec')
+    dev_no = 0
+    try:
+        if address_hex is not None:
+            dev_no = int(str(address_hex), 16)
+        elif address_dec is not None:
+            dev_no = int(address_dec)
+        else:
+            dev_no = 0
+    except Exception:
+        dev_no = 0
     level = int(data.get('level') or 0)
-    instr = _build_instruction(gateway_hex=gateway_hex, device_addr_dec=address_dec, level=level)
+    instr = _build_instruction(gateway_hex=gateway_hex, device_addr_dec=dev_no, level=level)
     serial = _try_import_serial()
     sent = False
     modes = []
