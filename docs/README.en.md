@@ -1,6 +1,5 @@
 # DALI Lighting & Energy Management (English)
 
-> GitHub-friendly docs. Please place screenshots under `docs/images/` and update links accordingly.
 
 ## Overview
 
