@@ -1,5 +1,15 @@
 {% extends 'base.html' %}
 {% block content %}
+<div class="actions-bar">
+  <div class="mode-group">
+    <span class="mode-label">场景模式：</span>
+    <button class="mode-btn" data-mode="eco">节能</button>
+    <button class="mode-btn active" data-mode="warm">暖光</button>
+    <button class="mode-btn" data-mode="breathing">呼吸</button>
+    <button class="mode-btn" data-mode="high">强光</button>
+    <button class="mode-btn" data-mode="off">关闭</button>
+  </div>
+</div>
 <div class="grid" style="grid-template-columns:1fr 1fr;">
   <section class="panel">
     <h2>能源分配</h2>

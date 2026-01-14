@@ -11,6 +11,117 @@ import os
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
+
+# Global System State
+app.config['SYSTEM_MODE'] = 'warm'  # default
+app.config['BREATHING_RUNNING'] = False
+
+def _breathing_worker():
+    step = 5
+    level = 1
+    direction = 1
+    while app.config.get('BREATHING_RUNNING'):
+        level += (step * direction)
+        if level >= 150:
+            level = 150
+            direction = -1
+        elif level <= 1:
+            level = 1
+            direction = 1
+        
+        # Send broadcast command (Address FE for broadcast based on user's examples)
+        # Construct instruction manually or use helper
+        # User example: 28 01 01 12 FE <Level> <Sum>
+        # We'll use _build_instruction logic but with fixed Broadcast address FE (which is 127*2, or 254? User used FE in "28010112fefe38" -> FE is address field)
+        # Actually user said: "28010112fefe38". FE is the address byte. 
+        # FE in hex is 254. 
+        gw = "01" # Default gateway
+        start = "28"
+        fixed = "01"
+        ctrl = "12"
+        dev = "FE" 
+        cmd = f"{int(level) & 0xFF:02X}"
+        parts = [start, fixed, gw, ctrl, dev, cmd]
+        checksum = sum(int(x, 16) for x in parts) & 0xFF
+        instr = "".join(parts) + f"{checksum:02X}"
+        
+        # Send to serial (fire and forget)
+        port = app.config.get('ACTIVE_PORT') or "/dev/ttyAMA3"
+        try:
+            # Try serial first
+            serial_lib = _try_import_serial()
+            if serial_lib:
+                ser = serial_lib.Serial(port, baudrate=9600, timeout=0.1)
+                ser.write(bytes.fromhex(instr))
+                ser.close()
+            else:
+                # Fallback to file write
+                with open(port, 'wb', buffering=0) as f:
+                    f.write(bytes.fromhex(instr))
+        except Exception:
+            pass
+            
+        time.sleep(0.16) # approx 10s cycle for ~60 steps
+
+def _set_system_mode(mode):
+    app.config['SYSTEM_MODE'] = mode
+    # Stop breathing if running
+    app.config['BREATHING_RUNNING'] = False
+    
+    level = 0
+    if mode == 'eco':
+        level = 50
+    elif mode == 'warm':
+        level = 150
+    elif mode == 'high':
+        level = 255
+    elif mode == 'off':
+        level = 0
+    elif mode == 'breathing':
+        app.config['BREATHING_RUNNING'] = True
+        threading.Thread(target=_breathing_worker, daemon=True).start()
+        return
+
+    # For static modes, send broadcast command once
+    # User example broadcast: 28010112fefe38 (Level FE=254?) No, that command was "Open All". 
+    # "Open All" command 28010112fefe38 -> FE address, FE level? (254). 
+    # "Close All" command 28010112fe003a -> FE address, 00 level.
+    # So FE is indeed the address for "All".
+    
+    gw = "01"
+    port = app.config.get('ACTIVE_PORT') or "/dev/ttyAMA3"
+    
+    # Send command
+    instr = _build_instruction(gw, 127, level) # 127*2 = 254 = FE
+    # Hack: _build_instruction takes decimal address. 127 -> FE.
+    # Re-verify _build_instruction logic: dev = f"{(int(device_addr_dec) * 2) & 0xFF:02X}"
+    # If device_addr_dec is 127, dev becomes FE. Correct.
+    
+    # Send
+    try:
+        serial_lib = _try_import_serial()
+        if serial_lib:
+            ser = serial_lib.Serial(port, baudrate=9600, timeout=1)
+            ser.write(bytes.fromhex(instr))
+            ser.close()
+        else:
+            with open(port, 'wb', buffering=0) as f:
+                f.write(bytes.fromhex(instr))
+    except Exception:
+        pass
+        
+    # Update all devices in memory
+    devices = read_json('devices.json')
+    for d in devices:
+        d['level'] = level
+    write_json('devices.json', devices)
+
+# Initialize default mode on startup (Warm)
+# We can't easily run this on module import effectively if reloaded, but for simple app it's ok.
+# Better to do it in a request or explicit init, but let's assume 'warm' state is default.
+# We will trigger the actual send on the first request or just rely on the user clicking.
+# User said "System startup default Warm". We can just set the config var which we did.
+
 def read_json(name):
     p = Path(config.DATA_DIR) / name
     if not p.exists():
@@ -199,6 +310,16 @@ def apply_scene():
     write_json('devices.json', devices)
     return jsonify({"status": "ok"})
 
+@app.route('/api/energy/mode', methods=['POST'])
+@login_required
+def energy_mode():
+    data = request.get_json(force=True)
+    mode = data.get('mode')
+    if mode not in ('eco', 'warm', 'breathing', 'high', 'off'):
+        return jsonify({"status": "error", "msg": "Invalid mode"}), 400
+    _set_system_mode(mode)
+    return jsonify({"status": "ok", "mode": mode})
+
 @app.route('/api/energy/realtime', methods=['GET'])
 @login_required
 def energy_realtime():
@@ -260,6 +381,7 @@ def energy_dashboard():
     if isinstance(cfg, dict) and cfg.get('enabled') and app.config.get('MQTT_LAST_DASH'):
         return jsonify(app.config['MQTT_LAST_DASH'])
     # Mock data
+    mode = app.config.get('SYSTEM_MODE', 'warm')
     now = time.localtime()
     times = []
     solar = []
@@ -270,41 +392,64 @@ def energy_dashboard():
     use_solar = []
     use_batt = []
     feed = []
+    
+    # Adjust mock parameters based on mode
+    # High: Low Price, High House Cons, Grid > Battery
+    # Eco/Off: High Price, Low House Cons, Battery > Grid
+    
+    base_cons = 10
+    grid_ratio = 0.6
+    batt_ratio = 0.2
+    price_level = 0.65 # default
+    
+    if mode == 'high':
+        base_cons = 20
+        grid_ratio = 0.9
+        batt_ratio = 0.1
+        price_level = 0.35 # Low price
+    elif mode in ('eco', 'off'):
+        base_cons = 5 if mode == 'eco' else 1
+        grid_ratio = 0.2
+        batt_ratio = 0.8
+        price_level = 0.95 # High price
+    
     for i in range(16):
         h = (i) + 0
         times.append(f"{h}:00")
         s = max(0, (8 <= h <= 16) and (5 + (i%5)) or (0))
-        g = 10 + (i%7)
+        g = base_cons + (i%7)
         b = 2 + (i%3)
         t = s + g + b
         solar.append(float(s))
         grid.append(float(g))
         battery.append(float(b))
         total.append(float(t))
-        use_grid.append(round(g*0.4,2))
+        use_grid.append(round(g*grid_ratio,2))
         use_solar.append(round(s*0.6,2))
-        use_batt.append(round(b*0.2,2))
+        use_batt.append(round(b*batt_ratio,2))
         feed.append(round(s*0.1,2))
+        
     summary = {
         "solar_kwh": 5.61,
         "battery_in_kwh": 1.42,
         "battery_out_kwh": 1.76,
         "battery_net_kwh": -0.34,
-        "grid_in_kwh": 3.64,
+        "grid_in_kwh": round(3.64 * (base_cons/10.0), 2),
         "grid_out_kwh": 1.04,
         "gas_m3": 1.6,
         "water_l": 340,
-        "house_kwh": 8.91,
+        "house_kwh": round(8.91 * (base_cons/10.0), 2),
         "grid_cost_usd": 0.63,
         "gas_cost_usd": 0.96,
         "water_cost_usd": 0.00,
         "grid_to_batt_kwh": 1.42,
-        "grid_to_house_kwh": 2.22,
+        "grid_to_house_kwh": round(2.22 * (base_cons/10.0) * (grid_ratio/0.6), 2),
         "battery_charge_kw": 0.85,
-        "battery_soc_percent": 68,
+        "battery_soc_percent": 68 if mode != 'high' else 45,
         "battery_remaining_kwh": 18.4,
         "battery_time_left_h": 4.6,
-        "battery_to_house_kw": 2.8
+        "battery_to_house_kw": round(2.8 * (base_cons/10.0) * (batt_ratio/0.2), 2),
+        "realtime_price": price_level
     }
     return jsonify({
         "summary": summary,

@@ -210,4 +210,37 @@ document.addEventListener('DOMContentLoaded',function(){
   // initial fetch once
   refreshHistory('price', currentPricePeriod(), {forceFetch:true});
   refreshHistory('cost', currentFeePeriod(), {forceFetch:true});
+
+  // Mode buttons
+  document.querySelectorAll('.mode-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var mode = this.dataset.mode;
+      // Optimistic UI update
+      document.querySelectorAll('.mode-btn').forEach(function(b){b.classList.remove('active')});
+      this.classList.add('active');
+      
+      fetch('/api/energy/mode', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({mode: mode})
+      }).then(function(r){return r.json()}).then(function(d){
+        if(d.status==='ok'){
+          // Update Tariff toggle visually if needed
+          var tToggle = document.getElementById('tariff-toggle');
+          if(tToggle){
+            if(mode === 'high'){
+               tToggle.dataset.mode = 'low'; // High Power -> Low Price
+               tToggle.textContent = (location.pathname.indexOf('/en/')===0) ? 'Low Tariff' : '低电价';
+            } else {
+               tToggle.dataset.mode = 'high'; // Others -> High Price
+               tToggle.textContent = (location.pathname.indexOf('/en/')===0) ? 'High Tariff' : '高电价';
+            }
+            drawFlows();
+          }
+          // Force refresh dashboard data
+          load();
+        }
+      });
+    });
+  });
 }) 

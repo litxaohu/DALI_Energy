@@ -1,5 +1,15 @@
 {% extends 'base_en.html' %}
 {% block content %}
+<div class="actions-bar">
+  <div class="mode-group">
+    <span class="mode-label">Scene Mode:</span>
+    <button class="mode-btn" data-mode="eco">Eco</button>
+    <button class="mode-btn active" data-mode="warm">Warm</button>
+    <button class="mode-btn" data-mode="breathing">Breath</button>
+    <button class="mode-btn" data-mode="high">High</button>
+    <button class="mode-btn" data-mode="off">Off</button>
+  </div>
+</div>
 <div class="grid" style="grid-template-columns:1fr 1fr;">
   <section class="panel">
     <h2>Energy Distribution</h2>

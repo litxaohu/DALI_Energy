@@ -6,5 +6,21 @@
     "level": 0,
     "gateway": "01",
     "port": "/dev/ttyAMA3"
+  },
+  {
+    "id": 2,
+    "address": 6,
+    "name": "射灯",
+    "level": 0,
+    "gateway": "01",
+    "port": "/dev/ttyAMA2"
+  },
+  {
+    "id": 3,
+    "address": 16,
+    "name": "灯光10",
+    "level": 0,
+    "gateway": "01",
+    "port": "/dev/ttyAMA2"
   }
 ]

@@ -9,7 +9,10 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">DALI 能源</div>
+    <div style="display:flex;align-items:center">
+      <button id="sidebar-toggle" class="sidebar-toggle">☰</button>
+      <div class="brand">DALI 能源</div>
+    </div>
     <nav class="nav">
       <select id="lang-select">
         <option value="zh">中文</option>
@@ -38,6 +41,13 @@
   <script src="/static/js/interfaces.js"></script>
   <script>
   (function(){
+    var toggle = document.getElementById('sidebar-toggle');
+    if(toggle){
+      toggle.addEventListener('click', function(){
+        document.querySelector('.sidebar').classList.toggle('collapsed');
+        document.querySelector('.layout').classList.toggle('collapsed');
+      });
+    }
     var sel=document.getElementById('lang-select');
     if(sel){
       sel.addEventListener('change', function(){
