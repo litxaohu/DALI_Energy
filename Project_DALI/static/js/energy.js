@@ -9,15 +9,34 @@ document.addEventListener('DOMContentLoaded',function(){
     var box=document.getElementById('energy-sources-table'); if(!box) return;
     var table=document.createElement('table');
     var thead=document.createElement('thead');
-    thead.innerHTML='<tr><th>数据源</th><th>用量</th><th>费用</th></tr>';
+    var isEN = location.pathname.indexOf('/en/')===0;
+    
+    if(isEN){
+      thead.innerHTML='<tr><th>Source</th><th>Usage</th><th>Cost</th></tr>';
+    } else {
+      thead.innerHTML='<tr><th>数据源</th><th>用量</th><th>费用</th></tr>';
+    }
+    
     var tbody=document.createElement('tbody');
-    var rows=[
-      {name:'光伏发电总量', val:fmt(data.solar_kwh,'kWh'), cost:'—'},
-      {name:'电池合计', val:fmt(data.battery_net_kwh,'kWh'), cost:'—'},
-      {name:'电网合计', val:fmt(data.grid_in_kwh,'kWh'), cost:'US$'+(data.grid_cost_usd||0).toFixed(2)},
-      {name:'燃气总计', val:fmt(data.gas_m3,'m³'), cost:'US$'+(data.gas_cost_usd||0).toFixed(2)},
-      {name:'自来水总量', val:fmt(data.water_l,'L'), cost:'US$'+(data.water_cost_usd||0).toFixed(2)}
-    ];
+    var rows=[];
+    if(isEN){
+      rows=[
+        {name:'PV Yield', val:fmt(data.solar_kwh,'kWh'), cost:'—'},
+        {name:'Battery Net', val:fmt(data.battery_net_kwh,'kWh'), cost:'—'},
+        {name:'Grid Import', val:fmt(data.grid_in_kwh,'kWh'), cost:'US$'+(data.grid_cost_usd||0).toFixed(2)},
+        {name:'Gas Total', val:fmt(data.gas_m3,'m³'), cost:'US$'+(data.gas_cost_usd||0).toFixed(2)},
+        {name:'Water Total', val:fmt(data.water_l,'L'), cost:'US$'+(data.water_cost_usd||0).toFixed(2)}
+      ];
+    } else {
+      rows=[
+        {name:'光伏发电总量', val:fmt(data.solar_kwh,'kWh'), cost:'—'},
+        {name:'电池合计', val:fmt(data.battery_net_kwh,'kWh'), cost:'—'},
+        {name:'电网合计', val:fmt(data.grid_in_kwh,'kWh'), cost:'US$'+(data.grid_cost_usd||0).toFixed(2)},
+        {name:'燃气总计', val:fmt(data.gas_m3,'m³'), cost:'US$'+(data.gas_cost_usd||0).toFixed(2)},
+        {name:'自来水总量', val:fmt(data.water_l,'L'), cost:'US$'+(data.water_cost_usd||0).toFixed(2)}
+      ];
+    }
+    
     rows.forEach(function(r){
       var tr=document.createElement('tr');
       tr.innerHTML='<td>'+r.name+'</td><td>'+r.val+'</td><td>'+r.cost+'</td>';
@@ -48,26 +67,28 @@ document.addEventListener('DOMContentLoaded',function(){
   var unitLabelPrice={CNY:'元/kWh', USD:'$/kWh', EUR:'€/kWh'};
   var unitLabelFee={CNY:'元', USD:'$', EUR:'€'};
   if(powerChart){
+    var isEN = location.pathname.indexOf('/en/')===0;
     powerChart.setOption({
       tooltip:{trigger:'axis'},
       xAxis:{type:'category',data:[]},
       yAxis:{type:'value',name:'kW'},
       series:[
-        {type:'line',areaStyle:{},name:'电网',data:[],smooth:true,itemStyle:{color:'#3b82f6'}},
-        {type:'line',areaStyle:{},name:'电池',data:[],smooth:true,itemStyle:{color:'#ec4899'}},
-        {type:'line',name:'建筑',data:[],lineStyle:{width:3,type:'dashed'},smooth:true,itemStyle:{color:'#f59e0b'}}
+        {type:'line',areaStyle:{},name:isEN?'Grid':'电网',data:[],smooth:true,itemStyle:{color:'#3b82f6'}},
+        {type:'line',areaStyle:{},name:isEN?'Battery':'电池',data:[],smooth:true,itemStyle:{color:'#ec4899'}},
+        {type:'line',name:isEN?'Building':'建筑',data:[],lineStyle:{width:3,type:'dashed'},smooth:true,itemStyle:{color:'#f59e0b'}}
       ]
     });
   }
   if(consChart){
+    var isEN = location.pathname.indexOf('/en/')===0;
     consChart.setOption({
       tooltip:{trigger:'axis'},
       xAxis:{type:'category',data:[]},
       yAxis:{type:'value',name:'kWh'},
       series:[
-        {type:'bar',name:'电网',stack:'use',data:[],itemStyle:{color:'#3b82f6'}},
-        {type:'bar',name:'电池',stack:'use',data:[],itemStyle:{color:'#ec4899'}},
-        {type:'line',name:'建筑',data:[],smooth:true,lineStyle:{width:3,type:'dashed'},itemStyle:{color:'#f59e0b'}}
+        {type:'bar',name:isEN?'Grid':'电网',stack:'use',data:[],itemStyle:{color:'#3b82f6'}},
+        {type:'bar',name:isEN?'Battery':'电池',stack:'use',data:[],itemStyle:{color:'#ec4899'}},
+        {type:'line',name:isEN?'Building':'建筑',data:[],smooth:true,lineStyle:{width:3,type:'dashed'},itemStyle:{color:'#f59e0b'}}
       ]
     });
   }
@@ -154,7 +175,14 @@ document.addEventListener('DOMContentLoaded',function(){
     pathBetween('node-grid','node-house','#cbd5e1','p-grid-house','right','left', mode==='low'?'blue':false);
     pathBetween('node-battery','node-house','#cbd5e1','p-batt-house','bottom','top', mode==='high'?'blue':false);
     var srcEl=document.getElementById('supply-source');
-    if(srcEl){ srcEl.textContent = (mode==='high' ? '电池' : '电网'); }
+    var isEN = location.pathname.indexOf('/en/')===0;
+    if(srcEl){ 
+      if(mode==='high'){
+        srcEl.textContent = isEN ? 'Battery' : '电池';
+      } else {
+        srcEl.textContent = isEN ? 'Grid' : '电网';
+      }
+    }
   }
   var toggle=document.getElementById('tariff-toggle');
   if(toggle){
