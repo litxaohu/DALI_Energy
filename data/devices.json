@@ -3,7 +3,7 @@
     "id": 1,
     "address": 0,
     "name": "灯光1",
-    "level": 255,
+    "level": 150,
     "gateway": "01",
     "port": "/dev/ttyAMA3"
   },
@@ -11,7 +11,7 @@
     "id": 2,
     "address": 6,
     "name": "射灯",
-    "level": 255,
+    "level": 150,
     "gateway": "01",
     "port": "/dev/ttyAMA2"
   },
@@ -19,7 +19,7 @@
     "id": 3,
     "address": 16,
     "name": "灯光10",
-    "level": 255,
+    "level": 150,
     "gateway": "01",
     "port": "/dev/ttyAMA2"
   }
