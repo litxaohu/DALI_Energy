@@ -16,10 +16,46 @@ app.secret_key = config.SECRET_KEY
 app.config['SYSTEM_MODE'] = 'warm'  # default
 app.config['BREATHING_RUNNING'] = False
 
+def _send_hex_via_script(port, hex_str):
+    """
+    Send HEX string using the bash script as requested.
+    Fallback to Python serial/file write if script fails (e.g. on Windows without bash).
+    """
+    # 1. Try Script
+    script_path = Path(__file__).resolve().parent / "scripts" / "send_dali_hex.sh"
+    try:
+        # Check if bash is available
+        subprocess.run(["bash", str(script_path), port, hex_str], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        return True
+    except Exception as e:
+        print(f"[WARN] Script send failed ({e}), falling back to internal serial write.")
+    
+    # 2. Fallback: Python Serial
+    try:
+        serial_lib = _try_import_serial()
+        if serial_lib:
+            ser = serial_lib.Serial(port, baudrate=9600, timeout=0.1)
+            ser.write(bytes.fromhex(hex_str))
+            ser.close()
+            return True
+    except Exception:
+        pass
+        
+    # 3. Fallback: File Write
+    try:
+        with open(port, 'wb', buffering=0) as f:
+            f.write(bytes.fromhex(hex_str))
+        return True
+    except Exception:
+        pass
+    return False
+
 def _breathing_worker():
     step = 5
     level = 1
     direction = 1
+    port = app.config.get('ACTIVE_PORT') or "/dev/ttyAMA3"
+    
     while app.config.get('BREATHING_RUNNING'):
         level += (step * direction)
         if level >= 150:
@@ -29,39 +65,21 @@ def _breathing_worker():
             level = 1
             direction = 1
         
-        # Send broadcast command (Address FE for broadcast based on user's examples)
-        # Construct instruction manually or use helper
-        # User example: 28 01 01 12 FE <Level> <Sum>
-        # We'll use _build_instruction logic but with fixed Broadcast address FE (which is 127*2, or 254? User used FE in "28010112fefe38" -> FE is address field)
-        # Actually user said: "28010112fefe38". FE is the address byte. 
-        # FE in hex is 254. 
-        gw = "01" # Default gateway
+        # User requested format: 28 01 <GW> 12 FE <CMD> <CS>
+        # GW=01, CMD=Level
+        gw = "01"
         start = "28"
         fixed = "01"
         ctrl = "12"
-        dev = "FE" 
+        dev = "FE"  # Broadcast to all
         cmd = f"{int(level) & 0xFF:02X}"
         parts = [start, fixed, gw, ctrl, dev, cmd]
         checksum = sum(int(x, 16) for x in parts) & 0xFF
         instr = "".join(parts) + f"{checksum:02X}"
         
-        # Send to serial (fire and forget)
-        port = app.config.get('ACTIVE_PORT') or "/dev/ttyAMA3"
-        try:
-            # Try serial first
-            serial_lib = _try_import_serial()
-            if serial_lib:
-                ser = serial_lib.Serial(port, baudrate=9600, timeout=0.1)
-                ser.write(bytes.fromhex(instr))
-                ser.close()
-            else:
-                # Fallback to file write
-                with open(port, 'wb', buffering=0) as f:
-                    f.write(bytes.fromhex(instr))
-        except Exception:
-            pass
+        _send_hex_via_script(port, instr)
             
-        time.sleep(0.16) # approx 10s cycle for ~60 steps
+        time.sleep(0.16)
 
 def _set_system_mode(mode):
     app.config['SYSTEM_MODE'] = mode
@@ -82,33 +100,20 @@ def _set_system_mode(mode):
         threading.Thread(target=_breathing_worker, daemon=True).start()
         return
 
-    # For static modes, send broadcast command once
-    # User example broadcast: 28010112fefe38 (Level FE=254?) No, that command was "Open All". 
-    # "Open All" command 28010112fefe38 -> FE address, FE level? (254). 
-    # "Close All" command 28010112fe003a -> FE address, 00 level.
-    # So FE is indeed the address for "All".
-    
+    # Static mode: Send command via script
     gw = "01"
     port = app.config.get('ACTIVE_PORT') or "/dev/ttyAMA3"
     
-    # Send command
-    instr = _build_instruction(gw, 127, level) # 127*2 = 254 = FE
-    # Hack: _build_instruction takes decimal address. 127 -> FE.
-    # Re-verify _build_instruction logic: dev = f"{(int(device_addr_dec) * 2) & 0xFF:02X}"
-    # If device_addr_dec is 127, dev becomes FE. Correct.
+    start = "28"
+    fixed = "01"
+    ctrl = "12"
+    dev = "FE"
+    cmd = f"{int(level) & 0xFF:02X}"
+    parts = [start, fixed, gw, ctrl, dev, cmd]
+    checksum = sum(int(x, 16) for x in parts) & 0xFF
+    instr = "".join(parts) + f"{checksum:02X}"
     
-    # Send
-    try:
-        serial_lib = _try_import_serial()
-        if serial_lib:
-            ser = serial_lib.Serial(port, baudrate=9600, timeout=1)
-            ser.write(bytes.fromhex(instr))
-            ser.close()
-        else:
-            with open(port, 'wb', buffering=0) as f:
-                f.write(bytes.fromhex(instr))
-    except Exception:
-        pass
+    _send_hex_via_script(port, instr)
         
     # Update all devices in memory
     devices = read_json('devices.json')
@@ -407,6 +412,11 @@ def energy_dashboard():
         grid_ratio = 0.9
         batt_ratio = 0.1
         price_level = 0.35 # Low price
+    elif mode == 'breathing':
+        base_cons = 15  # Between Warm(10) and High(20)
+        grid_ratio = 0.75 # Between 0.6 and 0.9
+        batt_ratio = 0.15 # Between 0.2 and 0.1
+        price_level = 0.50 # Moderate price
     elif mode in ('eco', 'off'):
         base_cons = 5 if mode == 'eco' else 1
         grid_ratio = 0.2
