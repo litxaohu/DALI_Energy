@@ -2,8 +2,20 @@
 {% block content %}
 <section class="panel">
   <h2>场景控制</h2>
-  <div class="controls">
-    <div>
+  
+  <div class="actions-bar" style="margin-bottom:20px;">
+    <div class="mode-group" style="justify-content:center;">
+      <span class="mode-label">场景模式：</span>
+      <button class="mode-btn" data-mode="eco">节能</button>
+      <button class="mode-btn" data-mode="warm">暖光</button>
+      <button class="mode-btn" data-mode="breathing">呼吸</button>
+      <button class="mode-btn" data-mode="high">强光</button>
+      <button class="mode-btn" data-mode="off">关闭</button>
+    </div>
+  </div>
+
+  <div class="panel-body">
+    <div class="control-group">
       <label>串口</label>
       <select id="scene-port-select"></select>
       <button id="scene-port-refresh">刷新串口</button>

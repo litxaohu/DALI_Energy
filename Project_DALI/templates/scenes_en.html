@@ -2,7 +2,20 @@
 {% block content %}
 <section class="panel">
   <h2>Scene Control</h2>
-  <div class="controls">
+  
+  <div class="actions-bar" style="margin-bottom:20px;">
+    <div class="mode-group" style="justify-content:center;">
+      <span class="mode-label">Scene Mode:</span>
+      <button class="mode-btn" data-mode="eco">Eco</button>
+      <button class="mode-btn" data-mode="warm">Warm</button>
+      <button class="mode-btn" data-mode="breathing">Breath</button>
+      <button class="mode-btn" data-mode="high">High</button>
+      <button class="mode-btn" data-mode="off">Off</button>
+    </div>
+  </div>
+
+  <div class="panel-body">
+    <div class="control-group">
     <div>
       <label>Serial</label>
       <select id="scene-port-select"></select>

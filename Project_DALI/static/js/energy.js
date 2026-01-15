@@ -239,6 +239,23 @@ document.addEventListener('DOMContentLoaded',function(){
   refreshHistory('price', currentPricePeriod(), {forceFetch:true});
   refreshHistory('cost', currentFeePeriod(), {forceFetch:true});
 
+  // Fetch initial mode
+  fetch('/api/energy/mode').then(function(r){return r.json()}).then(function(d){
+    if(d.status==='ok'){
+       document.querySelectorAll('.mode-btn').forEach(function(b){
+         b.classList.remove('active');
+         if(b.dataset.mode === d.mode) b.classList.add('active');
+       });
+       // also update tariff if needed
+       var tToggle = document.getElementById('tariff-toggle');
+       if(tToggle && d.mode === 'high'){
+          tToggle.dataset.mode = 'low';
+          var isEN = location.pathname.indexOf('/en/')===0;
+          tToggle.textContent = isEN ? 'Low Tariff' : '低电价';
+       }
+    }
+  });
+
   // Mode buttons
   document.querySelectorAll('.mode-btn').forEach(function(btn){
     btn.addEventListener('click', function(){

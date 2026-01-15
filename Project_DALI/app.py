@@ -315,9 +315,12 @@ def apply_scene():
     write_json('devices.json', devices)
     return jsonify({"status": "ok"})
 
-@app.route('/api/energy/mode', methods=['POST'])
+@app.route('/api/energy/mode', methods=['GET', 'POST'])
 @login_required
 def energy_mode():
+    if request.method == 'GET':
+        return jsonify({"status": "ok", "mode": app.config.get('SYSTEM_MODE', 'warm')})
+        
     data = request.get_json(force=True)
     mode = data.get('mode')
     if mode not in ('eco', 'warm', 'breathing', 'high', 'off'):

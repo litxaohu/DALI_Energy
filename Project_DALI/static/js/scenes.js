@@ -49,4 +49,37 @@ document.addEventListener('DOMContentLoaded',function(){
       box.appendChild(btn);
     });
   });
+
+  // Mode buttons
+  function updateModeButtons(mode) {
+    document.querySelectorAll('.mode-btn').forEach(function(b){
+      b.classList.remove('active');
+      if(b.dataset.mode === mode) b.classList.add('active');
+    });
+  }
+
+  // Fetch initial mode
+  fetch('/api/energy/mode').then(function(r){return r.json()}).then(function(d){
+    if(d.status==='ok') updateModeButtons(d.mode);
+  });
+
+  // Handle clicks
+  document.querySelectorAll('.mode-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var mode = this.dataset.mode;
+      updateModeButtons(mode);
+      fetch('/api/energy/mode', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({mode: mode})
+      }).then(function(r){return r.json()}).then(function(d){
+        if(d.status==='ok'){
+          var log = document.getElementById('scene-log');
+          if(log) log.innerHTML = '<div class="log-item">' + 
+            (isEN ? 'Switched to mode: ' : '已切换模式: ') + mode + 
+            ' <span class="time">'+new Date().toLocaleTimeString()+'</span></div>' + log.innerHTML;
+        }
+      });
+    });
+  });
 })
