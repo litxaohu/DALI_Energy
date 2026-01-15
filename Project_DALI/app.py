@@ -54,7 +54,7 @@ def _breathing_worker():
     step = 5
     level = 1
     direction = 1
-    port = app.config.get('ACTIVE_PORT') or "/dev/ttyAMA3"
+    port = app.config.get('ACTIVE_PORT') or "/dev/ttyAMA2"
     
     while app.config.get('BREATHING_RUNNING'):
         level += (step * direction)
@@ -92,7 +92,7 @@ def _set_system_mode(mode):
     elif mode == 'warm':
         level = 150
     elif mode == 'high':
-        level = 255
+        level = 254
     elif mode == 'off':
         level = 0
     elif mode == 'breathing':
@@ -102,7 +102,7 @@ def _set_system_mode(mode):
 
     # Static mode: Send command via script
     gw = "01"
-    port = app.config.get('ACTIVE_PORT') or "/dev/ttyAMA3"
+    port = app.config.get('ACTIVE_PORT') or "/dev/ttyAMA2"
     
     start = "28"
     fixed = "01"
@@ -278,7 +278,7 @@ def control_light():
             d['level'] = int(value)
             updated = True
             gw = str(d.get('gateway') or "01").upper()
-            port = d.get('port') or "/dev/ttyAMA3"
+            port = d.get('port') or "/dev/ttyAMA2"
             instruction = _build_instruction(gateway_hex=gw, device_addr_dec=int(address), level=int(value))
             break
     if updated:
@@ -671,7 +671,7 @@ def add_light():
     address_hex = data.get('address_hex')
     address_dec = data.get('address_dec')
     gateway_hex = (data.get('gateway_hex') or "01").upper()
-    port = data.get('port') or "/dev/ttyAMA3"
+    port = data.get('port') or "/dev/ttyAMA2"
     dev_no = None
     if address_hex:
         try:
@@ -733,7 +733,7 @@ def _try_import_serial():
 @login_required
 def dali_send():
     data = request.get_json(force=True)
-    port = data.get('port') or app.config.get('ACTIVE_PORT') or "/dev/ttyAMA3"
+    port = data.get('port') or app.config.get('ACTIVE_PORT') or "/dev/ttyAMA2"
     gateway_hex = (data.get('gateway_hex') or "01").upper()
     address_hex = data.get('address_hex')
     address_dec = data.get('address_dec')
@@ -789,7 +789,7 @@ def dali_send():
 @login_required
 def dali_send_hex():
     data = request.get_json(force=True)
-    port = data.get('port') or app.config.get('ACTIVE_PORT') or "/dev/ttyAMA3"
+    port = data.get('port') or app.config.get('ACTIVE_PORT') or "/dev/ttyAMA2"
     hex_str = data.get('hex') or ''
     hex_clean = "".join([c for c in str(hex_str) if c.upper() in "0123456789ABCDEF"])
     if not hex_clean:
